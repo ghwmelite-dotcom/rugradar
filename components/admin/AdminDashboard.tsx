@@ -5,8 +5,9 @@
 // is deliberately manual: X intent links open the composer with precomposed
 // text, the operator attaches the downloaded card PNG and posts.
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { ScanResult } from "@/lib/scan";
+import { ThreadStudio } from "./ThreadStudio";
 import {
   caReplyVerdict,
   dailyReportPost,
@@ -136,6 +137,7 @@ function PostBlock({ post }: { post: Post }) {
 export function AdminDashboard() {
   const [data, setData] = useState<AdminData | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
 
   // Section A — editable card fields (auto-filled from the feed aggregate).
   const [date, setDate] = useState("");
@@ -145,7 +147,10 @@ export function AdminDashboard() {
   const [riskiestName, setRiskiestName] = useState("");
   const [riskiestLine, setRiskiestLine] = useState("");
 
-  useEffect(() => {
+  // Initial load fills the editable card fields; refreshes (Thread Studio
+  // "Regenerate") only swap the data so the operator's edits survive.
+  const load = useCallback((initial: boolean) => {
+    if (!initial) setRefreshing(true);
     fetch("/api/admin/data")
       .then(async (res) => {
         const body = await res.json();
@@ -154,6 +159,7 @@ export function AdminDashboard() {
       })
       .then((d) => {
         setData(d);
+        if (!initial) return;
         setDate(d.today);
         setScanned(String(d.scanned));
         setHoneypots(String(d.honeypots));
@@ -167,8 +173,13 @@ export function AdminDashboard() {
         );
         setRiskiestLine(d.riskiest?.line ?? "");
       })
-      .catch((e) => setLoadError(e.message));
+      .catch((e) => setLoadError(e.message))
+      .finally(() => setRefreshing(false));
   }, []);
+
+  useEffect(() => {
+    load(true);
+  }, [load]);
 
   // Debounce the preview so typing doesn't fire an ImageResponse per key.
   const previewParams = useDebounced(
@@ -361,6 +372,18 @@ export function AdminDashboard() {
         </div>
 
         <PostBlock post={daily} />
+      </Section>
+
+      {/* Thread Studio */}
+      <Section
+        title="Thread Studio"
+        hint="Five thread types built from the live window. Disabled cards say why. Links live in the reply, never in the thread body."
+      >
+        <ThreadStudio
+          data={data}
+          refreshing={refreshing}
+          onRefresh={() => load(false)}
+        />
       </Section>
 
       {/* B. Post generator */}

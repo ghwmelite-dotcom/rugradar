@@ -1,11 +1,12 @@
 // GET /api/admin/data
 // Auth-gated aggregate powering the /admin content vault: scan-log feed
-// counts, the riskiest token in the window, and — for that token — a fresh
-// scored scan so the card/captions can quote real red flags. The rescan
-// hits the normal provider cache (15min security TTL), so repeated loads
-// are cheap. Everything degrades gracefully: an empty or unreachable scan
-// log yields zeros and a null riskiest, and the dashboard fields stay
-// editable.
+// counts, the verdict split, the riskiest token, and per-token insights for
+// the Thread Studio. ScanLogEntry rows don't store flag text, so a bounded
+// set of tokens (riskiest + top 4 most-scanned + top 4 wall-of-shame,
+// deduped) is rescanned for real flags — that hits the normal provider
+// cache (15min security TTL), so repeated loads are cheap. Everything
+// degrades gracefully: an empty or unreachable scan log yields zeros, and
+// a failed rescan yields an insight with no flags.
 
 import { NextResponse } from "next/server";
 import { isAdmin } from "@/lib/admin-auth";
@@ -14,11 +15,49 @@ import {
   pickRiskiest,
   reportUrl,
   type AdminData,
+  type TokenInsight,
 } from "@/lib/admin-content";
-import { EMPTY_FEED, getFeed } from "@/lib/scanlog";
+import { EMPTY_FEED, getFeed, type ScanLogEntry } from "@/lib/scanlog";
 import { scanToken } from "@/lib/scan";
 
 export const dynamic = "force-dynamic";
+
+const MAX_LEADERBOARD = 4;
+const MAX_WALL_OF_SHAME = 4;
+
+// Build an insight from a log entry + a fresh (cached) scored scan. Never
+// throws — a failed rescan returns the entry's own data with no flags.
+async function toInsight(
+  entry: ScanLogEntry,
+  scanCount: number,
+): Promise<TokenInsight> {
+  const base: TokenInsight = {
+    chain: entry.chain,
+    address: entry.address,
+    name: entry.name,
+    symbol: entry.symbol,
+    score: entry.score,
+    band: entry.band,
+    honeypot: entry.honeypot,
+    scanCount,
+    topFlag: null,
+    flags: [],
+    url: reportUrl(entry.chain, entry.address),
+  };
+  try {
+    const result = await scanToken(entry.chain, entry.address);
+    const flags = result.score.flags.map((f) => f.text);
+    return {
+      ...base,
+      score: result.score.score,
+      band: result.score.band,
+      topFlag: flags[0] ?? null,
+      flags,
+    };
+  } catch {
+    return base;
+  }
+}
 
 export async function GET() {
   if (!(await isAdmin())) {
@@ -54,44 +93,62 @@ export async function GET() {
     // honestly instead of implying weekly counters we don't keep.
     window: "24 hours",
     riskiest: null,
+    bands: { AVOID: 0, CAUTION: 0, LOWER_RISK: 0, unscored: 0 },
+    leaderboard: [],
+    wallOfShame: [],
   };
 
-  const candidate = pickRiskiest(recent);
-  if (candidate) {
-    const base = {
-      chain: candidate.chain,
-      address: candidate.address,
-      name: candidate.name,
-      symbol: candidate.symbol,
-      score: candidate.score,
-      band: candidate.band,
-      url: reportUrl(candidate.chain, candidate.address),
+  for (const e of recent) {
+    if (e.band) data.bands[e.band] += 1;
+    else data.bands.unscored += 1;
+  }
+
+  // Scan counters for wall-of-shame tokens (they may not be in mostScanned).
+  const countByKey = new Map<string, number>(
+    feed.mostScanned.map((e) => [
+      `${e.chain}:${e.address.toLowerCase()}`,
+      e.count,
+    ]),
+  );
+  const countOf = (e: ScanLogEntry): number =>
+    countByKey.get(`${e.chain}:${e.address.toLowerCase()}`) ?? 0;
+
+  // Rescan the studio's token set in parallel; per-token failures degrade
+  // to flag-less insights instead of failing the whole payload.
+  const riskiestEntry = pickRiskiest(recent);
+  const [leaderboard, wallOfShame] = await Promise.all([
+    Promise.all(
+      feed.mostScanned
+        .slice(0, MAX_LEADERBOARD)
+        .map((e) => toInsight(e, e.count)),
+    ),
+    Promise.all(
+      feed.honeypots
+        .slice(0, MAX_WALL_OF_SHAME)
+        .map((e) => toInsight(e, countOf(e))),
+    ),
+  ]);
+  data.leaderboard = leaderboard;
+  data.wallOfShame = wallOfShame;
+
+  if (riskiestEntry) {
+    const insight = await toInsight(riskiestEntry, countOf(riskiestEntry));
+    data.riskiest = {
+      chain: insight.chain,
+      address: insight.address,
+      name: insight.name,
+      symbol: insight.symbol,
+      score: insight.score,
+      band: insight.band,
+      flagCount: insight.flags.length,
+      flags: insight.flags,
+      line:
+        oneLinerFromFlags(insight.flags) ||
+        (insight.score !== null
+          ? `scored ${insight.score}/100 — see the full report for the breakdown`
+          : "no red flags in the latest scan — verify before posting"),
+      url: insight.url,
     };
-    try {
-      const result = await scanToken(candidate.chain, candidate.address);
-      const flagTexts = result.score.flags.map((f) => f.text);
-      data.riskiest = {
-        ...base,
-        score: result.score.score,
-        band: result.score.band,
-        flagCount: flagTexts.length,
-        flags: flagTexts,
-        line:
-          oneLinerFromFlags(flagTexts) ||
-          "no red flags in the latest scan — verify before posting",
-      };
-    } catch {
-      // Rescan failed — fall back to what the log entry already knows.
-      data.riskiest = {
-        ...base,
-        flagCount: 0,
-        flags: [],
-        line:
-          candidate.score !== null
-            ? `scored ${candidate.score}/100 — see the full report for the breakdown`
-            : "unscored — security data unavailable",
-      };
-    }
   }
 
   return NextResponse.json(data);
