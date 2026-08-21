@@ -8,4 +8,12 @@
   //   npx wrangler secret put TELEGRAM_BOT_TOKEN
   //   npx wrangler secret put TELEGRAM_WEBHOOK_SECRET
   // Never commit them here. See setup.md.
+  "kv_namespaces": [
+    {
+      "binding": "MEMESCANNER_CACHE",
+      // Shared Deathwatch namespace (schema: docs/DEATHWATCH.md) — used for
+      // the tg:subs subscriber list.
+      "id": "a4486b07fcce49f08ddee721bbef50e2"
+    }
+  ]
 }

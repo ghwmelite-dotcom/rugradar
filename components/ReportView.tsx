@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ScoreDial } from "./ScoreDial";
 import { SearchBox } from "./SearchBox";
 import { ShareButtons, canonicalReportUrl } from "./ShareButtons";
+import { WatchButton } from "./WatchButton";
 import { DeployerCard } from "./DeployerCard";
 import { proxiedImage } from "@/lib/imageProxy";
 import type { ScanResult } from "@/lib/scan";
@@ -286,6 +287,7 @@ function Report({ data }: { data: ScanResult }) {
           URL to warn others
         </span>
         <div className="flex shrink-0 items-center gap-3">
+          <WatchButton chain={report.chain} address={report.address} />
           <ShareButtons
             url={canonicalReportUrl(report.chain, report.address)}
             data={data}

@@ -35,6 +35,12 @@ export default function RootLayout({
               >
                 Live feed
               </Link>
+              <Link
+                href="/alerts"
+                className="text-xs text-zinc-400 hover:text-emerald-400 transition-colors"
+              >
+                Deathwatch
+              </Link>
               <span className="hidden sm:inline text-xs text-zinc-500">
                 solana · ethereum · bsc · base · arbitrum · polygon
               </span>

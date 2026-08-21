@@ -1,0 +1,319 @@
+// Traffic-driven Deathwatch monitor (docs/DEATHWATCH.md).
+//
+// Cloudflare cron triggers on rugradar-watch fire unreliably (fires once
+// after deploy, then silent), so the web app — which sees steady traffic
+// via /api/scan and /api/alerts — kicks the monitor itself. kickMonitor()
+// is throttled to one run per 90s via the `monitor:lastkick` KV key, so
+// request volume doesn't translate into provider call volume.
+//
+// Storage keys (shared MEMESCANNER_CACHE namespace; direct binding access
+// like lib/watchlist.ts, NOT the TTL'd cache lib):
+//   monitor:lastkick              number (ms epoch) — throttle stamp
+//   watch:cursor                  number — rotating slice cursor (shared
+//                                 semantics with the watch-worker)
+//   watch:snap:{chain}:{addr}     {liquidityUsd, priceUsd, ts} — 48h TTL
+//   alerts:recent                 AlertEntry[], newest first, cap 100, 7d TTL
+//   calledit:list                 ReceiptEntry[], cap 500, no TTL
+//   tg:subs                       [chatId, ...] — Telegram subscribers
+//
+// kickMonitor NEVER throws — it runs detached from user requests
+// (ctx.waitUntil), so a failure must lose a monitor pass, never a scan.
+
+import { getCloudflareContext } from "@opennextjs/cloudflare";
+import type { Chain } from "./chains";
+import { getTokenPairs } from "./providers/dexscreener";
+import { providerAvailable, recordProviderCall } from "./quota";
+import {
+  getAlerts,
+  getReceipts,
+  getWatchlist,
+  ALERTS_KEY,
+  RECEIPTS_KEY,
+  type AlertEntry,
+  type AlertSeverity,
+  type ReceiptEntry,
+  type WatchEntry,
+} from "./watchlist";
+
+const LASTKICK_KEY = "monitor:lastkick";
+const CURSOR_KEY = "watch:cursor";
+const SUBS_KEY = "tg:subs";
+
+const THROTTLE_MS = 90_000; // one monitor pass per 90s across all traffic
+const SLICE_SIZE = 6; // tokens checked per kick
+const SNAP_TTL = 48 * 60 * 60; // 48h, per spec
+const ALERTS_TTL = 7 * 24 * 60 * 60; // 7d, per spec
+const MAX_ALERTS = 100;
+const MAX_RECEIPTS = 500;
+const DEDUPE_MS = 30 * 60_000; // same chain+address+rule within 30m = dupe
+
+const RUG_LP_USD = 1_000; // LP < $1k (was ≥$1k) = rug confirmed
+const CRITICAL_DROP = 0.5; // ≥50% LP drop
+const WARNING_DROP = 0.25; // ≥25% LP drop
+
+const REPORT_BASE = "https://rugradar.trademetricspro.com/report";
+
+interface Snapshot {
+  liquidityUsd: number;
+  priceUsd: number | null;
+  ts: string; // ISO
+}
+
+// Minimal structural type for the KV binding (avoids a workers-types dep).
+interface KVBindingLike {
+  get(key: string, type: "json"): Promise<unknown>;
+  put(
+    key: string,
+    value: string,
+    options?: { expirationTtl?: number },
+  ): Promise<void>;
+}
+
+// Same globalThis key as lib/watchlist.ts, so the dev/test fallback is one
+// shared in-memory namespace — exactly like the single shared KV in prod.
+const globalForMonitor = globalThis as unknown as {
+  __memescanWatchState?: Map<string, unknown>;
+};
+
+function memoryStore(): Map<string, unknown> {
+  if (!globalForMonitor.__memescanWatchState) {
+    globalForMonitor.__memescanWatchState = new Map();
+  }
+  return globalForMonitor.__memescanWatchState;
+}
+
+function store(): KVBindingLike {
+  try {
+    const env = getCloudflareContext().env as unknown as {
+      MEMESCANNER_CACHE?: KVBindingLike;
+    };
+    if (env.MEMESCANNER_CACHE) return env.MEMESCANNER_CACHE;
+  } catch {
+    // Not in a Cloudflare request context (plain node, tests).
+  }
+  const map = memoryStore();
+  return {
+    async get(key) {
+      return map.has(key) ? map.get(key) : null;
+    },
+    async put(key, value) {
+      map.set(key, JSON.parse(value));
+    },
+  };
+}
+
+function snapKey(chain: Chain, address: string): string {
+  return `watch:snap:${chain}:${address.toLowerCase()}`;
+}
+
+function fmtUsd(n: number): string {
+  if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000) return `$${(n / 1_000).toFixed(1)}k`;
+  return `$${Math.round(n)}`;
+}
+
+// Resolve TELEGRAM_BOT_TOKEN: Worker secret via the Cloudflare context
+// first, process.env fallback — mirrors lib/admin-auth.ts getAdminSecret.
+function getTelegramToken(): string | undefined {
+  try {
+    const env = getCloudflareContext().env as unknown as {
+      TELEGRAM_BOT_TOKEN?: string;
+    };
+    if (env.TELEGRAM_BOT_TOKEN) return env.TELEGRAM_BOT_TOKEN;
+  } catch {
+    // Not in a Cloudflare request context (plain node, tests).
+  }
+  return process.env.TELEGRAM_BOT_TOKEN || undefined;
+}
+
+// Send the alert card to every Telegram subscriber. Best-effort per chat:
+// allSettled + 10s abort timeouts; failures lose a message, never a kick.
+async function broadcast(kv: KVBindingLike, alert: AlertEntry): Promise<void> {
+  const token = getTelegramToken();
+  if (!token) return;
+  const subs = await kv.get(SUBS_KEY, "json");
+  if (!Array.isArray(subs) || subs.length === 0) return;
+
+  const emoji =
+    alert.severity === "rug" ? "💀" : alert.severity === "critical" ? "🚨" : "⚠️";
+  const text = [
+    `${emoji} ${alert.symbol ?? "Unknown token"} · ${alert.chain}`,
+    alert.text,
+    `${REPORT_BASE}/${alert.chain}/${alert.address}`,
+  ].join("\n");
+
+  await Promise.allSettled(
+    subs.map(async (chatId) => {
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), 10_000);
+      try {
+        await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ chat_id: chatId, text }),
+          signal: ctrl.signal,
+        });
+      } finally {
+        clearTimeout(timer);
+      }
+    }),
+  );
+}
+
+// Fresh market data -> snapshot diff -> maybe alert (+ receipt + broadcast).
+async function checkToken(kv: KVBindingLike, entry: WatchEntry): Promise<void> {
+  if (!providerAvailable("dexscreener")) return;
+  recordProviderCall("dexscreener");
+  const result = await getTokenPairs(entry.chain, [entry.address]);
+  if (!result.ok) return;
+
+  const liquidityUsd = result.data.reduce(
+    (sum, p) => sum + (p.liquidity?.usd ?? 0),
+    0,
+  );
+  const firstPrice = result.data[0]?.priceUsd;
+  const priceUsd = firstPrice ? parseFloat(firstPrice) : null;
+
+  const now = Date.now();
+  const key = snapKey(entry.chain, entry.address);
+  const prev = (await kv.get(key, "json")) as Snapshot | null;
+
+  // Snapshot is written on every check — including the first-ever one,
+  // which establishes the baseline and never alerts.
+  await kv.put(
+    key,
+    JSON.stringify({ liquidityUsd, priceUsd, ts: new Date(now).toISOString() }),
+    { expirationTtl: SNAP_TTL },
+  );
+  if (!prev || typeof prev.liquidityUsd !== "number") return;
+
+  const drop =
+    prev.liquidityUsd > 0
+      ? (prev.liquidityUsd - liquidityUsd) / prev.liquidityUsd
+      : 0;
+
+  let severity: AlertSeverity | null = null;
+  let rule: string | null = null;
+  if (liquidityUsd < RUG_LP_USD && prev.liquidityUsd >= RUG_LP_USD) {
+    severity = "rug";
+    rule = "liquidity-gone";
+  } else if (drop >= CRITICAL_DROP) {
+    severity = "critical";
+    rule = "lp-drain";
+  } else if (drop >= WARNING_DROP) {
+    severity = "warning";
+    rule = "lp-drop";
+  }
+  if (!severity || !rule) return;
+
+  // Dedupe: same token + same rule within 30 min -> skip write + broadcast.
+  const alerts = await getAlerts();
+  const isDupe = alerts.some(
+    (a) =>
+      a.chain === entry.chain &&
+      a.address.toLowerCase() === entry.address.toLowerCase() &&
+      a.rule === rule &&
+      now - new Date(a.ts).getTime() < DEDUPE_MS,
+  );
+  if (isDupe) return;
+
+  // Observational language only — state changed, never "will rug".
+  const mins = Math.max(
+    1,
+    Math.round((now - new Date(prev.ts).getTime()) / 60_000),
+  );
+  const pct = Math.round(drop * 100);
+  const alert: AlertEntry = {
+    ts: new Date(now).toISOString(),
+    chain: entry.chain,
+    address: entry.address,
+    symbol: entry.symbol,
+    severity,
+    rule,
+    text: `Liquidity dropped ${pct}% in ~${mins} min (${fmtUsd(prev.liquidityUsd)} → ${fmtUsd(liquidityUsd)})`,
+  };
+  await kv.put(ALERTS_KEY, JSON.stringify([alert, ...alerts].slice(0, MAX_ALERTS)), {
+    expirationTtl: ALERTS_TTL,
+  });
+
+  // Receipt: only when the flag preceded the rug — the watch entry's band /
+  // honeypot flag and addedAt timestamp are the proof.
+  if (
+    severity === "rug" &&
+    (entry.lastBand === "AVOID" ||
+      entry.lastBand === "CAUTION" ||
+      entry.honeypot)
+  ) {
+    const receipts = await getReceipts();
+    const receipt: ReceiptEntry = {
+      chain: entry.chain,
+      address: entry.address,
+      symbol: entry.symbol,
+      flaggedBand: entry.lastBand ?? "HONEYPOT",
+      flaggedAt: entry.addedAt,
+      ruggedAt: alert.ts,
+      rule,
+    };
+    receipts.push(receipt);
+    await kv.put(
+      RECEIPTS_KEY,
+      JSON.stringify(receipts.slice(-MAX_RECEIPTS)),
+    );
+  }
+
+  await broadcast(kv, alert);
+}
+
+// One throttled monitor pass: stamp the throttle FIRST (so concurrent
+// requests don't pile up), then check a rotating slice of the watchlist.
+export async function kickMonitor(): Promise<void> {
+  try {
+    const kv = store();
+
+    const last = await kv.get(LASTKICK_KEY, "json");
+    const now = Date.now();
+    if (typeof last === "number" && now - last < THROTTLE_MS) return;
+    await kv.put(LASTKICK_KEY, JSON.stringify(now));
+
+    const watchlist = await getWatchlist();
+    if (watchlist.length === 0) return;
+
+    // Rotating slice, shared `watch:cursor` semantics with the watch-worker:
+    // read int, take up to SLICE_SIZE entries wrapping around, write next.
+    const cursorRaw = await kv.get(CURSOR_KEY, "json");
+    const start =
+      typeof cursorRaw === "number" && cursorRaw >= 0
+        ? cursorRaw % watchlist.length
+        : 0;
+    const slice: WatchEntry[] = [];
+    for (let i = 0; i < Math.min(SLICE_SIZE, watchlist.length); i++) {
+      slice.push(watchlist[(start + i) % watchlist.length]);
+    }
+    await kv.put(
+      CURSOR_KEY,
+      JSON.stringify((start + slice.length) % watchlist.length),
+    );
+
+    // Per-token isolation: one bad token must not sink the pass.
+    for (const entry of slice) {
+      try {
+        await checkToken(kv, entry);
+      } catch {
+        // Next token.
+      }
+    }
+  } catch {
+    // The monitor runs detached from user requests — never throw into them.
+  }
+}
+
+// Fire-and-forget kick from a request route: ctx.waitUntil on Workers,
+// detached promise elsewhere — exactly the scheduleScanLog pattern.
+export function scheduleMonitorKick(): void {
+  const kicked = kickMonitor();
+  try {
+    getCloudflareContext().ctx.waitUntil(kicked);
+  } catch {
+    void kicked.catch(() => {});
+  }
+}

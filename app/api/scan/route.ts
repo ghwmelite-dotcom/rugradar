@@ -10,6 +10,7 @@ import { isChain, type Chain } from "@/lib/chains";
 import { checkRateLimit } from "@/lib/ratelimit";
 import { scanToken, type ScanResult } from "@/lib/scan";
 import { recordScan } from "@/lib/scanlog";
+import { scheduleMonitorKick } from "@/lib/monitor";
 
 export const dynamic = "force-dynamic";
 
@@ -90,6 +91,7 @@ export async function GET(req: NextRequest) {
   try {
     const result = await scanToken(chain, address);
     scheduleScanLog(chain, address, result);
+    scheduleMonitorKick(); // traffic-driven Deathwatch pass (throttled)
     return NextResponse.json(result, { headers: CORS });
   } catch (err) {
     return NextResponse.json(

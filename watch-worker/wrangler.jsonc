@@ -1,0 +1,21 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "rugradar-watch",
+  "account_id": "ea2eb3a9813660dfca2a60e594858538",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-08-21",
+  "triggers": {
+    "crons": ["*/2 * * * *"]
+  },
+  // Shared KV namespace with the rugradar web app and rugradar-bot.
+  // Schema documented in docs/DEATHWATCH.md.
+  "kv_namespaces": [
+    {
+      "binding": "MEMESCANNER_CACHE",
+      "id": "a4486b07fcce49f08ddee721bbef50e2"
+    }
+  ]
+  // TELEGRAM_BOT_TOKEN is a Worker secret:
+  //   npx wrangler secret put TELEGRAM_BOT_TOKEN
+  // Never commit it here. See setup.md.
+}
