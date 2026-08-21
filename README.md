@@ -68,6 +68,8 @@ Every deduction emits a human-readable flag shown in the UI.
 - **Cloudflare rate limiting** binding (30 scans/min per IP) with an
   in-memory token-bucket fallback
 - **Vitest** for unit tests
+- **PWA** — installable (web app manifest + hand-written service worker)
+  with a branded offline fallback page
 
 ## API
 

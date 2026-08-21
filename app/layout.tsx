@@ -1,6 +1,7 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import Link from "next/link";
 import { Space_Grotesk, Inter } from "next/font/google";
+import PwaRegister from "@/components/PwaRegister";
 import "./globals.css";
 
 const spaceGrotesk = Space_Grotesk({
@@ -20,6 +21,11 @@ export const metadata: Metadata = {
   title: "RugRadar — memecoin risk scanner",
   description:
     "Paste a contract address or coin name and get an instant plain-English risk report: honeypot checks, LP lock status, holder concentration.",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "RugRadar",
+  },
   icons: {
     icon: [
       { url: "/icon.svg", type: "image/svg+xml" },
@@ -29,13 +35,30 @@ export const metadata: Metadata = {
   },
 };
 
+export const viewport: Viewport = {
+  themeColor: "#05080d",
+};
+
 export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en" className={`${spaceGrotesk.variable} ${inter.variable}`}>
       <body className="min-h-screen flex flex-col font-sans">
-        <header className="relative border-b border-white/5">
+        {/* "The Sweep" — ambient radar-room background (see globals.css) */}
+        <div aria-hidden className="bg-scene">
+          <div className="bg-aurora bg-aurora-cyan" />
+          <div className="bg-aurora bg-aurora-green" />
+          <div className="bg-radar">
+            <div className="bg-rings" />
+            <div className="bg-sweep" />
+          </div>
+          <div className="bg-blip" />
+          <div className="bg-grain" />
+          <div className="bg-vignette" />
+        </div>
+        <PwaRegister />
+        <header className="relative z-10 border-b border-white/5">
           {/* cyan gradient hairline under the header border */}
           <div
             aria-hidden
@@ -70,10 +93,10 @@ export default function RootLayout({
             </div>
           </div>
         </header>
-        <main className="flex-1 mx-auto w-full max-w-3xl px-4 py-8">
+        <main className="relative z-10 flex-1 mx-auto w-full max-w-3xl px-4 py-8">
           {children}
         </main>
-        <footer className="relative border-t border-white/5">
+        <footer className="relative z-10 border-t border-white/5">
           <div
             aria-hidden
             className="pointer-events-none absolute inset-x-0 -top-px h-px bg-gradient-to-r from-transparent via-brand-cyan/20 to-transparent"

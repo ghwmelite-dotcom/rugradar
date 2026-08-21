@@ -19,13 +19,192 @@
 
 body {
   @apply bg-ink text-zinc-100 antialiased;
-  /* Subtle cyan radial glows over the near-black navy base */
-  background-image:
-    radial-gradient(60rem 30rem at 50% -10%, rgb(0 229 255 / 0.07), transparent 60%),
-    radial-gradient(40rem 24rem at 85% 10%, rgb(0 255 157 / 0.04), transparent 60%),
-    radial-gradient(36rem 24rem at 10% 30%, rgb(0 229 255 / 0.03), transparent 60%);
-  background-attachment: fixed;
-  background-repeat: no-repeat;
+}
+
+/* ============================================================
+   "The Sweep" — ambient radar-room background
+   Rendered once as a fixed layer stack in app/layout.tsx.
+   Every layer is pointer-events: none, transform/opacity-only
+   animation, and sits below content (content wrappers are z-10).
+   Reduced-motion users get the static grain/rings/glows only.
+   ============================================================ */
+
+.bg-scene {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+/* Ambient aurora — two huge blurred blobs drifting very slowly */
+.bg-aurora {
+  position: absolute;
+  width: 65vmax;
+  height: 65vmax;
+  border-radius: 9999px;
+  filter: blur(90px);
+  pointer-events: none;
+}
+
+.bg-aurora-cyan {
+  top: -25vmax;
+  left: -18vmax;
+  background: radial-gradient(
+    closest-side,
+    rgb(0 229 255 / 0.05),
+    transparent 70%
+  );
+}
+
+.bg-aurora-green {
+  bottom: -28vmax;
+  right: -20vmax;
+  background: radial-gradient(
+    closest-side,
+    rgb(0 255 157 / 0.04),
+    transparent 70%
+  );
+}
+
+/* Radar field — concentric rings + rotating sweep, radial-fade masked.
+   Centered slightly below viewport middle; translate (not transform)
+   keeps the sweep free to rotate around the same center. */
+.bg-radar {
+  position: absolute;
+  left: 50%;
+  top: 55%;
+  width: 170vmax;
+  height: 170vmax;
+  translate: -50% -50%;
+  pointer-events: none;
+  -webkit-mask-image: radial-gradient(
+    closest-side,
+    black 25%,
+    transparent 68%
+  );
+  mask-image: radial-gradient(closest-side, black 25%, transparent 68%);
+}
+
+.bg-rings {
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  background: repeating-radial-gradient(
+    circle at center,
+    rgb(0 229 255 / 0.035) 0 2px,
+    transparent 2px 90px
+  );
+}
+
+.bg-sweep {
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  background: conic-gradient(
+    from 0deg,
+    rgb(0 229 255 / 0.09),
+    rgb(0 229 255 / 0.02) 30deg,
+    transparent 40deg
+  );
+}
+
+/* The blip — one detected rug, off-center heartbeat */
+.bg-blip {
+  position: absolute;
+  left: 58%;
+  top: 44%;
+  width: 6px;
+  height: 6px;
+  border-radius: 9999px;
+  background: var(--color-danger);
+  box-shadow: 0 0 12px 3px rgb(255 92 92 / 0.55);
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Filmic grain — kills the flat-digital look */
+.bg-grain {
+  position: absolute;
+  inset: 0;
+  opacity: 0.025;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  pointer-events: none;
+}
+
+/* Cinema framing — subtle inset darkening at viewport edges */
+.bg-vignette {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    120% 95% at 50% 45%,
+    transparent 55%,
+    rgb(2 4 8 / 0.55) 100%
+  );
+  pointer-events: none;
+}
+
+/* One authored motion set — transform/opacity only, motion-safe only */
+@media (prefers-reduced-motion: no-preference) {
+  .bg-sweep {
+    animation: radar-sweep 20s linear infinite;
+  }
+
+  .bg-aurora-cyan {
+    animation: aurora-drift-a 75s ease-in-out infinite alternate;
+  }
+
+  .bg-aurora-green {
+    animation: aurora-drift-b 90s ease-in-out infinite alternate;
+  }
+
+  .bg-blip {
+    animation: radar-blip 8s ease-in-out infinite;
+  }
+}
+
+@keyframes radar-sweep {
+  to {
+    transform: rotate(1turn);
+  }
+}
+
+@keyframes aurora-drift-a {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(7vw, 5vh, 0);
+  }
+}
+
+@keyframes aurora-drift-b {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(-6vw, -4vh, 0);
+  }
+}
+
+@keyframes radar-blip {
+  0% {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+  8% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  45% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  60%,
+  100% {
+    opacity: 0;
+    transform: scale(0.6);
+  }
 }
 
 /* Card surface — translucent, hairline border, cyan hover affordance */
