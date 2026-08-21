@@ -57,6 +57,12 @@ interface Snapshot {
   liquidityUsd: number;
   priceUsd: number | null;
   ts: string; // ISO
+  // Breach confirmation: transient DexScreener pair-set variance can make a
+  // summed-liquidity reading collapse for one pass (a blue-chip "rugging"
+  // 99% is the canonical false positive). A rule only alerts after the
+  // SAME breach is seen on two consecutive checks; passes are ~90s apart,
+  // so real drains still alert within minutes.
+  pendingRule?: string | null;
 }
 
 // Minimal structural type for the KV binding (avoids a workers-types dep).
@@ -204,7 +210,33 @@ async function checkToken(kv: KVBindingLike, entry: WatchEntry): Promise<void> {
     severity = "warning";
     rule = "lp-drop";
   }
-  if (!severity || !rule) return;
+
+  // Breach confirmation gate: on a first breach, keep the PRE-breach
+  // baseline values and just record pendingRule — if the next check still
+  // breaches against that same baseline, it's real and alerts; if the
+  // reading recovers, it was pair-set noise and clears silently.
+  if (rule && prev.pendingRule === rule) {
+    // confirmed — fall through to alert with a fresh baseline
+    await kv.put(
+      key,
+      JSON.stringify({ liquidityUsd, priceUsd, ts: new Date(now).toISOString(), pendingRule: null }),
+      { expirationTtl: SNAP_TTL },
+    );
+  } else if (rule) {
+    await kv.put(
+      key,
+      JSON.stringify({ liquidityUsd: prev.liquidityUsd, priceUsd: prev.priceUsd, ts: prev.ts, pendingRule: rule }),
+      { expirationTtl: SNAP_TTL },
+    );
+    return; // first sighting — hold the alert for confirmation
+  } else if (prev.pendingRule) {
+    await kv.put(
+      key,
+      JSON.stringify({ liquidityUsd, priceUsd, ts: new Date(now).toISOString(), pendingRule: null }),
+      { expirationTtl: SNAP_TTL },
+    );
+  }
+  if (!severity || !rule || prev.pendingRule !== rule) return;
 
   // Dedupe: same token + same rule within 30 min -> skip write + broadcast.
   const alerts = await getAlerts();

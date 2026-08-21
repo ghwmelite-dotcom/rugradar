@@ -79,6 +79,13 @@ function tenMinBeforeT0(): string {
   return new Date(T0.getTime() - 10 * 60_000).toISOString();
 }
 
+// Advance past the 90s kick throttle and kick again. Breach confirmation
+// (two consecutive sightings) means alerts fire on the SECOND kick.
+async function kickAgain(): Promise<void> {
+  vi.setSystemTime(Date.now() + 91_000);
+  await kickMonitor();
+}
+
 beforeEach(() => {
   store().clear();
   mocks.getTokenPairs.mockReset();
@@ -137,15 +144,17 @@ describe("snapshot diffing", () => {
     setLiquidity(500);
 
     await kickMonitor();
+    expect(await getAlerts()).toEqual([]); // first sighting: pending only
+
+    await kickAgain(); // confirmed on the second consecutive sighting
 
     const alerts = await getAlerts();
     expect(alerts).toHaveLength(1);
     expect(alerts[0].severity).toBe("rug");
     expect(alerts[0].rule).toBe("liquidity-gone");
     expect(alerts[0].text).toBe(
-      "Liquidity dropped 90% in ~10 min ($5.0k → $500)",
+      "Liquidity dropped 90% in ~12 min ($5.0k → $500)",
     );
-    expect(alerts[0].ts).toBe(T0.toISOString());
   });
 
   it("raises critical on a ≥50% LP drop", async () => {
@@ -154,6 +163,8 @@ describe("snapshot diffing", () => {
     setLiquidity(4_000);
 
     await kickMonitor();
+    expect(await getAlerts()).toEqual([]);
+    await kickAgain();
 
     const alerts = await getAlerts();
     expect(alerts).toHaveLength(1);
@@ -167,11 +178,29 @@ describe("snapshot diffing", () => {
     setLiquidity(7_000);
 
     await kickMonitor();
+    expect(await getAlerts()).toEqual([]);
+    await kickAgain();
 
     const alerts = await getAlerts();
     expect(alerts).toHaveLength(1);
     expect(alerts[0].severity).toBe("warning");
     expect(alerts[0].rule).toBe("lp-drop");
+  });
+
+  it("does NOT alert on a one-pass liquidity collapse (pair-set flakiness)", async () => {
+    // Regression: LINK's summed LP read $44.5M one pass and $401k the next
+    // because DexScreener returned a different pair set — a false 99% drain.
+    await addToWatchlist(makeEntry("0xaaa"));
+    seedSnap("0xaaa", 44_500_000, tenMinBeforeT0());
+    setLiquidity(401_300);
+
+    await kickMonitor();
+    expect(await getAlerts()).toEqual([]); // held for confirmation
+
+    // Next pass reads normal again: breach clears, never alerts.
+    setLiquidity(44_000_000);
+    await kickAgain();
+    expect(await getAlerts()).toEqual([]);
   });
 
   it("stays quiet below the 25% threshold", async () => {
@@ -210,7 +239,7 @@ describe("alert dedupe", () => {
     setLiquidity(4_000);
 
     await kickMonitor();
-    expect(await getAlerts()).toHaveLength(1); // dupe suppressed
+    expect(await getAlerts()).toHaveLength(1); // dupe suppressed (pending only)
 
     // Same alert now older than 30 min: a fresh drain re-alerts.
     store().set(ALERTS_KEY, [
@@ -220,7 +249,10 @@ describe("alert dedupe", () => {
     seedSnap("0xaaa", 4_000, T0.toISOString()); // fresh baseline to drain from
     setLiquidity(1_500);
 
-    await kickMonitor();
+    await kickMonitor(); // first sighting vs new baseline: pending
+    expect(await getAlerts()).toHaveLength(1);
+    await kickAgain(); // confirmed
+
     const alerts = await getAlerts();
     expect(alerts).toHaveLength(2);
     expect(alerts[0].rule).toBe("lp-drain");
@@ -239,6 +271,8 @@ describe("called-it receipts", () => {
     setLiquidity(100);
 
     await kickMonitor();
+    expect(await getReceipts()).toEqual([]); // pending, not confirmed
+    await kickAgain();
 
     const receipts = await getReceipts();
     expect(receipts).toHaveLength(1);
@@ -247,7 +281,7 @@ describe("called-it receipts", () => {
       address: "0xaaa",
       flaggedBand: "AVOID",
       flaggedAt: "2026-08-19T08:00:00.000Z",
-      ruggedAt: T0.toISOString(),
+      ruggedAt: new Date(T0.getTime() + 91_000).toISOString(),
       rule: "liquidity-gone",
     });
   });
@@ -260,6 +294,7 @@ describe("called-it receipts", () => {
     setLiquidity(100);
 
     await kickMonitor();
+    await kickAgain();
 
     expect(await getAlerts()).toHaveLength(1); // alert still fires
     expect(await getReceipts()).toEqual([]);
@@ -273,6 +308,7 @@ describe("called-it receipts", () => {
     setLiquidity(100);
 
     await kickMonitor();
+    await kickAgain();
 
     const receipts = await getReceipts();
     expect(receipts).toHaveLength(1);

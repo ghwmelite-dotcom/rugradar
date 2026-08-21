@@ -13,9 +13,9 @@ import type { CategoryKey } from "@/lib/scoring";
 import { CATEGORY_LABELS } from "@/lib/scoring";
 
 const BAND_STYLES: Record<string, string> = {
-  AVOID: "bg-red-500/15 text-red-400 border-red-500/40",
-  CAUTION: "bg-yellow-500/15 text-yellow-400 border-yellow-500/40",
-  LOWER_RISK: "bg-emerald-500/15 text-emerald-400 border-emerald-500/40",
+  AVOID: "bg-red-500/15 text-red-400 border-red-500/40 shadow-[0_0_24px_rgb(255_92_92/0.25)]",
+  CAUTION: "bg-yellow-500/15 text-yellow-400 border-yellow-500/40 shadow-[0_0_24px_rgb(250_204_21/0.2)]",
+  LOWER_RISK: "bg-emerald-500/15 text-emerald-400 border-emerald-500/40 shadow-[0_0_24px_rgb(0_255_157/0.2)]",
 };
 
 const BAND_TEXT: Record<string, string> = {
@@ -71,7 +71,7 @@ function CategoryBar({
           {available && score !== null ? `${score}/100` : "data unavailable"}
         </span>
       </div>
-      <div className="h-2 rounded-full bg-zinc-800 overflow-hidden">
+      <div className="h-2 rounded-full bg-white/[0.06] overflow-hidden">
         {available && score !== null && (
           <div
             className={`h-full rounded-full ${color}`}
@@ -116,7 +116,7 @@ export function ReportView({
 
       {!data && !error && (
         <div className="text-center py-16 space-y-3">
-          <div className="inline-block h-8 w-8 animate-spin rounded-full border-2 border-zinc-700 border-t-emerald-400" />
+          <div className="inline-block h-8 w-8 animate-spin rounded-full border-2 border-zinc-700 border-t-brand-cyan" />
           <p className="text-sm text-zinc-400">
             Scanning {chain}… this can take a few seconds.
           </p>
@@ -158,19 +158,19 @@ function Report({ data }: { data: ScanResult }) {
           <div className="h-12 w-12 rounded-full bg-zinc-800" />
         )}
         <div className="flex-1 min-w-0">
-          <h1 className="text-xl font-bold truncate">
+          <h1 className="text-xl font-bold font-display truncate">
             {report.name ?? "Unknown token"}{" "}
             <span className="text-zinc-500 font-normal">{report.symbol ?? ""}</span>
           </h1>
           <p className="text-xs text-zinc-500 truncate">{report.address}</p>
         </div>
-        <span className="rounded bg-zinc-800 px-2.5 py-1 text-xs text-zinc-300">
+        <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-xs text-zinc-300">
           {report.chain}
         </span>
       </div>
 
       {/* score */}
-      <div className="flex flex-col sm:flex-row items-center gap-6 rounded-xl border border-zinc-800 bg-zinc-900/50 p-6">
+      <div className="card card-hover flex flex-col sm:flex-row items-center gap-6 p-6">
         <ScoreDial score={score.score} band={score.band} />
         <div className="flex-1 space-y-3 text-center sm:text-left">
           {score.scored && score.band ? (
@@ -195,7 +195,7 @@ function Report({ data }: { data: ScanResult }) {
             </>
           ) : (
             <>
-              <span className="inline-block rounded-full border border-zinc-600 bg-zinc-800 px-4 py-1 text-sm font-bold text-zinc-300">
+              <span className="inline-block rounded-full border border-white/15 bg-white/[0.04] px-4 py-1 text-sm font-bold text-zinc-300">
                 UNSCORED
               </span>
               <p className="text-sm text-zinc-400">
@@ -227,7 +227,7 @@ function Report({ data }: { data: ScanResult }) {
             {score.flags.map((f, i) => (
               <li
                 key={i}
-                className="flex gap-2 rounded-lg border border-zinc-800 bg-zinc-900/50 px-3 py-2 text-sm"
+                className="card flex gap-2 px-3 py-2 text-sm"
               >
                 <span className={f.deduction >= 25 ? "text-red-400" : "text-amber-400"}>
                   −{f.deduction}
@@ -272,7 +272,7 @@ function Report({ data }: { data: ScanResult }) {
           ].map(([label, value]) => (
             <div
               key={label}
-              className="rounded-lg border border-zinc-800 bg-zinc-900/50 px-3 py-2"
+              className="card px-3 py-2"
             >
               <div className="text-xs text-zinc-500">{label}</div>
               <div className="text-sm font-medium">{value}</div>
@@ -281,7 +281,7 @@ function Report({ data }: { data: ScanResult }) {
         </div>
       </section>
 
-      <div className="flex items-center justify-between gap-3 text-xs text-zinc-500 border-t border-zinc-800 pt-4">
+      <div className="flex items-center justify-between gap-3 text-xs text-zinc-500 border-t border-white/[0.06] pt-4">
         <span>
           Scanned at {new Date(report.scannedAt).toLocaleString()} · share this
           URL to warn others
@@ -292,7 +292,7 @@ function Report({ data }: { data: ScanResult }) {
             url={canonicalReportUrl(report.chain, report.address)}
             data={data}
           />
-          <Link href="/" className="text-emerald-400 hover:underline">
+          <Link href="/" className="text-brand-cyan hover:underline">
             Scan another
           </Link>
         </div>

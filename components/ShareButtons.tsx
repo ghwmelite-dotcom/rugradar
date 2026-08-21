@@ -51,7 +51,7 @@ export function buildShareText(data: ScanResult): string {
 }
 
 const BUTTON_CLASS =
-  "inline-flex items-center justify-center rounded-md border border-zinc-800 bg-zinc-900/50 p-2 text-zinc-400 transition-colors hover:border-emerald-500/40 hover:text-emerald-400";
+  "inline-flex items-center justify-center rounded-md border border-white/[0.08] bg-white/[0.02] p-2 text-zinc-400 transition-colors hover:border-brand-cyan/40 hover:text-brand-cyan";
 
 function XIcon() {
   return (
@@ -151,7 +151,7 @@ export function ShareButtons({
       <button
         type="button"
         onClick={copyLink}
-        className={`${BUTTON_CLASS} ${copied ? "border-emerald-500/40 text-emerald-400" : ""}`}
+        className={`${BUTTON_CLASS} ${copied ? "border-brand-green/40 text-brand-green" : ""}`}
         title={copied ? "Copied" : "Copy link"}
         aria-label={copied ? "Link copied" : "Copy link"}
       >

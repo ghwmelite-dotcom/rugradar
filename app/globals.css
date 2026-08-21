@@ -1,9 +1,63 @@
 @import "tailwindcss";
 
+@theme {
+  /* Brand palette (matches trademetricspro.com) */
+  --color-ink: #05080d;
+  --color-brand-cyan: #00e5ff;
+  --color-brand-green: #00ff9d;
+  --color-danger: #ff5c5c;
+  --color-warning: #facc15;
+
+  --font-display: var(--font-space-grotesk), "Space Grotesk", ui-sans-serif,
+    system-ui, sans-serif;
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+}
+
 :root {
   color-scheme: dark;
 }
 
 body {
-  @apply bg-zinc-950 text-zinc-100 antialiased;
+  @apply bg-ink text-zinc-100 antialiased;
+  /* Subtle cyan radial glows over the near-black navy base */
+  background-image:
+    radial-gradient(60rem 30rem at 50% -10%, rgb(0 229 255 / 0.07), transparent 60%),
+    radial-gradient(40rem 24rem at 85% 10%, rgb(0 255 157 / 0.04), transparent 60%),
+    radial-gradient(36rem 24rem at 10% 30%, rgb(0 229 255 / 0.03), transparent 60%);
+  background-attachment: fixed;
+  background-repeat: no-repeat;
+}
+
+/* Card surface — translucent, hairline border, cyan hover affordance */
+.card {
+  @apply rounded-2xl border border-white/[0.06] bg-white/[0.02] transition-colors;
+}
+
+.card-hover {
+  @apply hover:border-cyan-500/30 hover:bg-white/[0.04];
+}
+
+/* Eyebrow pill — pulsing dot + uppercase micro label */
+.eyebrow {
+  @apply inline-flex items-center gap-2 rounded-full border border-cyan-400/20 bg-cyan-400/5 px-3 py-1 text-[11px] font-medium uppercase tracking-widest text-cyan-300;
+}
+
+.eyebrow-dot {
+  @apply inline-block h-1.5 w-1.5 rounded-full bg-cyan-400 motion-safe:animate-pulse;
+}
+
+/* LIVE badge — green pulsing dot + micro text */
+.live-dot {
+  @apply inline-block h-1.5 w-1.5 rounded-full bg-emerald-400 motion-safe:animate-pulse;
+  box-shadow: 0 0 8px rgb(0 255 157 / 0.8);
+}
+
+/* Cyan → green brand gradient (primary CTAs, brand text) */
+.btn-brand {
+  @apply inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-brand-cyan to-brand-green font-bold text-ink transition hover:brightness-110 disabled:opacity-50;
+  box-shadow: 0 0 24px rgb(0 229 255 / 0.25);
+}
+
+.text-brand-gradient {
+  @apply bg-gradient-to-r from-brand-cyan to-brand-green bg-clip-text text-transparent;
 }

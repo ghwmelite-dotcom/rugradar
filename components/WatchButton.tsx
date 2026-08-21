@@ -38,7 +38,7 @@ export function WatchButton({
 
   if (status === "success") {
     return (
-      <span className="text-xs text-emerald-400">
+      <span className="text-xs text-brand-green">
         Watching — alerts on Telegram +{" "}
         <Link href="/alerts" className="hover:underline">
           /alerts
@@ -53,7 +53,7 @@ export function WatchButton({
         type="button"
         onClick={watch}
         disabled={status === "loading"}
-        className="rounded border border-emerald-500/40 bg-emerald-500/10 px-2.5 py-1 text-xs font-medium text-emerald-400 hover:bg-emerald-500/20 disabled:opacity-50 transition-colors"
+        className="rounded-lg border border-brand-cyan/40 bg-brand-cyan/10 px-2.5 py-1 text-xs font-medium text-brand-cyan hover:bg-brand-cyan/20 disabled:opacity-50 transition-colors"
       >
         {status === "loading" ? "Adding…" : "Watch this token"}
       </button>

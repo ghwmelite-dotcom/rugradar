@@ -54,14 +54,10 @@ export function SearchBox() {
           value={value}
           onChange={(e) => setValue(e.target.value)}
           placeholder="Contract address (0x… or Solana) or coin name"
-          className="flex-1 rounded-lg bg-zinc-900 border border-zinc-700 px-4 py-3 text-sm placeholder:text-zinc-500 focus:outline-none focus:border-emerald-500"
+          className="flex-1 rounded-2xl border border-white/10 bg-white/[0.03] px-5 py-4 text-sm placeholder:text-zinc-500 focus:outline-none focus:border-brand-cyan/60 focus:ring-2 focus:ring-brand-cyan/30 transition"
           autoFocus
         />
-        <button
-          type="submit"
-          disabled={loading}
-          className="rounded-lg bg-emerald-500 px-5 py-3 text-sm font-semibold text-zinc-950 hover:bg-emerald-400 disabled:opacity-50"
-        >
+        <button type="submit" disabled={loading} className="btn-brand px-6 py-4 text-sm">
           {loading ? "Scanning…" : "Scan"}
         </button>
       </form>
@@ -78,21 +74,21 @@ export function SearchBox() {
       )}
 
       {options && (
-        <div className="rounded-lg border border-zinc-800 divide-y divide-zinc-800 overflow-hidden text-left">
-          <p className="px-4 py-2 text-xs text-zinc-500 bg-zinc-900">
+        <div className="card divide-y divide-white/[0.06] overflow-hidden text-left">
+          <p className="px-4 py-2 text-xs text-zinc-500 bg-white/[0.02]">
             Multiple matches — pick one (ranked by liquidity):
           </p>
           {options.map((o) => (
             <button
               key={`${o.chain}:${o.address}`}
               onClick={() => router.push(`/report/${o.chain}/${o.address}`)}
-              className="w-full flex items-center gap-3 px-4 py-3 hover:bg-zinc-900 transition-colors"
+              className="w-full flex items-center gap-3 px-4 py-3 hover:bg-white/[0.04] transition-colors"
             >
               {o.imageUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={o.imageUrl} alt="" className="h-8 w-8 rounded-full" />
               ) : (
-                <div className="h-8 w-8 rounded-full bg-zinc-800" />
+                <div className="h-8 w-8 rounded-full bg-white/[0.06]" />
               )}
               <div className="flex-1 min-w-0">
                 <div className="text-sm font-medium truncate">
@@ -104,7 +100,7 @@ export function SearchBox() {
                 </div>
               </div>
               <div className="text-right">
-                <span className="inline-block rounded bg-zinc-800 px-2 py-0.5 text-xs text-zinc-300">
+                <span className="inline-block rounded-full border border-white/10 bg-white/[0.04] px-2 py-0.5 text-xs text-zinc-300">
                   {o.chain}
                 </span>
                 <div className="text-xs text-zinc-500 mt-0.5">

@@ -41,8 +41,12 @@ export default async function AlertsPage() {
   return (
     <div className="space-y-10">
       <section className="space-y-3 pt-2">
-        <h1 className="text-2xl font-bold tracking-tight">
-          Death<span className="text-red-400">watch</span>
+        <p className="eyebrow">
+          <span className="eyebrow-dot" />
+          Around-the-clock watch — public receipts ledger
+        </p>
+        <h1 className="font-display text-3xl sm:text-4xl font-bold tracking-tight">
+          Death<span className="text-danger">watch</span>
         </h1>
         <p className="text-zinc-400 text-sm max-w-xl">
           The public record. Watched tokens are monitored around the clock;

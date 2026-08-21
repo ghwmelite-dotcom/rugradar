@@ -25,7 +25,7 @@ export function ScoreDial({
           cy="64"
           r={r}
           fill="none"
-          stroke="#27272a"
+          stroke="rgba(255,255,255,0.08)"
           strokeWidth="10"
         />
         <circle
@@ -38,13 +38,14 @@ export function ScoreDial({
           strokeLinecap="round"
           strokeDasharray={circumference}
           strokeDashoffset={circumference * (1 - pct)}
+          style={{ filter: `drop-shadow(0 0 6px ${color})` }}
         />
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
         {unscored ? (
           <span className="text-sm font-semibold text-zinc-400">Unscored</span>
         ) : (
-          <span className="text-3xl font-bold" style={{ color }}>
+          <span className="text-3xl font-bold font-display" style={{ color }}>
             {score}
           </span>
         )}

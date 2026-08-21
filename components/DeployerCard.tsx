@@ -65,7 +65,7 @@ export function DeployerCard({
       <h2 className="text-sm font-semibold uppercase tracking-wider text-zinc-400">
         Deployer
       </h2>
-      <div className="space-y-3 rounded-lg border border-zinc-800 bg-zinc-900/50 px-4 py-3">
+      <div className="card card-hover space-y-3 px-4 py-3">
         {profile.serialRugger && (
           <p className="rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm font-semibold text-red-400">
             Serial deployer — {avoidCount} prior tokens scored AVOID.
@@ -79,7 +79,7 @@ export function DeployerCard({
               href={explorerUrl(chain, profile.address)}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-sm font-medium text-emerald-400 hover:underline"
+              className="text-sm font-medium text-brand-cyan hover:underline"
               title={profile.address}
             >
               {truncateAddress(profile.address)} ↗
@@ -103,7 +103,7 @@ export function DeployerCard({
                 <li key={`${t.chain}:${t.address}`}>
                   <Link
                     href={`/report/${t.chain}/${t.address}`}
-                    className="flex items-center gap-2 rounded-lg border border-zinc-800 px-3 py-2 text-sm transition-colors hover:border-emerald-500/40"
+                    className="flex items-center gap-2 rounded-xl border border-white/[0.06] px-3 py-2 text-sm transition-colors hover:border-brand-cyan/40"
                   >
                     <span className="min-w-0 flex-1 truncate text-zinc-200">
                       {t.name ?? "Unknown token"}{" "}

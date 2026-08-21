@@ -88,15 +88,15 @@ function AccuracyStrip({ stats }: { stats: DeathwatchStats }) {
         Track record
       </h2>
       <div className="grid grid-cols-3 gap-2">
-        <div className="rounded-lg border border-zinc-800 bg-zinc-900/50 px-3 py-2">
+        <div className="card px-3 py-2">
           <div className="text-xs text-zinc-500">Watching now</div>
           <div className="text-sm font-medium">{stats.watched}</div>
         </div>
-        <div className="rounded-lg border border-zinc-800 bg-zinc-900/50 px-3 py-2">
+        <div className="card px-3 py-2">
           <div className="text-xs text-zinc-500">Confirmed rugs</div>
           <div className="text-sm font-medium">{stats.receipts}</div>
         </div>
-        <div className="rounded-lg border border-zinc-800 bg-zinc-900/50 px-3 py-2">
+        <div className="card px-3 py-2">
           <div className="text-xs text-zinc-500">Flagged first</div>
           {enough ? (
             <div className="text-sm font-medium text-emerald-400">
@@ -135,13 +135,13 @@ function CalledItLedger({ receipts }: { receipts: ReceiptEntry[] }) {
         observations of what the data showed, not predictions.
       </p>
       {receipts.length === 0 ? (
-        <p className="rounded-lg border border-zinc-800 bg-zinc-900/50 px-4 py-3 text-sm text-zinc-500">
+        <p className="card px-4 py-3 text-sm text-zinc-500">
           No receipts yet. One is recorded the first time a token flagged
           AVOID/CAUTION (or a confirmed honeypot) loses its liquidity while
           watched.
         </p>
       ) : (
-        <div className="rounded-lg border border-zinc-800 divide-y divide-zinc-800 overflow-hidden">
+        <div className="card card-hover divide-y divide-white/[0.06] overflow-hidden">
           {receipts.map((r, i) => {
             const flaggedMs = new Date(r.flaggedAt).getTime();
             const ruggedMs = new Date(r.ruggedAt).getTime();
@@ -153,14 +153,14 @@ function CalledItLedger({ receipts }: { receipts: ReceiptEntry[] }) {
               <Link
                 key={`${r.chain}:${r.address}:${r.ruggedAt}:${i}`}
                 href={`/report/${r.chain}/${r.address}`}
-                className="block px-4 py-3 hover:bg-zinc-900 transition-colors"
+                className="block px-4 py-3 hover:bg-white/[0.04] transition-colors"
               >
                 <div className="flex items-center gap-3">
                   <div className="flex-1 min-w-0">
                     <span className="text-sm font-medium truncate">
                       {r.symbol ?? "Unknown token"}
                     </span>{" "}
-                    <span className="rounded bg-zinc-800 px-1.5 py-0.5 text-[10px] text-zinc-400">
+                    <span className="rounded-full border border-white/10 bg-white/[0.04] px-1.5 py-0.5 text-[10px] text-zinc-400">
                       {r.chain}
                     </span>
                   </div>
@@ -214,26 +214,26 @@ function LiveAlerts({ alerts }: { alerts: AlertEntry[] }) {
         Live alerts <span className="normal-case font-normal">(last 7 days)</span>
       </h2>
       {alerts.length === 0 ? (
-        <p className="rounded-lg border border-zinc-800 bg-zinc-900/50 px-4 py-3 text-sm text-zinc-500">
+        <p className="card px-4 py-3 text-sm text-zinc-500">
           No alerts yet — watched tokens are checked every couple of minutes
           and anything that moves lands here and on Telegram. Quiet is good.
         </p>
       ) : (
-        <div className="rounded-lg border border-zinc-800 divide-y divide-zinc-800 overflow-hidden">
+        <div className="card card-hover divide-y divide-white/[0.06] overflow-hidden">
           {alerts.map((a, i) => {
             const sev = SEVERITY[a.severity] ?? SEVERITY.warning;
             return (
               <Link
                 key={`${a.chain}:${a.address}:${a.ts}:${i}`}
                 href={`/report/${a.chain}/${a.address}`}
-                className="flex items-center gap-3 px-4 py-2.5 hover:bg-zinc-900 transition-colors"
+                className="flex items-center gap-3 px-4 py-2.5 hover:bg-white/[0.04] transition-colors"
               >
                 <span aria-hidden>{sev.icon}</span>
                 <div className="flex-1 min-w-0">
                   <span className="text-sm font-medium truncate">
                     {a.symbol ?? "Unknown token"}
                   </span>{" "}
-                  <span className="rounded bg-zinc-800 px-1.5 py-0.5 text-[10px] text-zinc-400">
+                  <span className="rounded-full border border-white/10 bg-white/[0.04] px-1.5 py-0.5 text-[10px] text-zinc-400">
                     {a.chain}
                   </span>
                   <p className="text-xs text-zinc-400 truncate">{a.text}</p>

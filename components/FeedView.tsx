@@ -41,7 +41,7 @@ function TokenRow({
   return (
     <Link
       href={`/report/${entry.chain}/${entry.address}`}
-      className="flex items-center gap-3 px-4 py-2.5 hover:bg-zinc-900 transition-colors"
+      className="flex items-center gap-3 px-4 py-2.5 hover:bg-white/[0.04] transition-colors"
     >
       {proxiedImage(entry.imageUrl) ? (
         // eslint-disable-next-line @next/next/no-img-element
@@ -51,7 +51,7 @@ function TokenRow({
           className="h-7 w-7 rounded-full"
         />
       ) : (
-        <div className="h-7 w-7 rounded-full bg-zinc-800" />
+        <div className="h-7 w-7 rounded-full bg-white/[0.06]" />
       )}
       <div className="flex-1 min-w-0">
         <span className="text-sm font-medium truncate">
@@ -64,7 +64,7 @@ function TokenRow({
           </span>
         )}
       </div>
-      <span className="hidden sm:inline-block rounded bg-zinc-800 px-2 py-0.5 text-xs text-zinc-400">
+      <span className="hidden sm:inline-block rounded-full border border-white/10 bg-white/[0.04] px-2 py-0.5 text-xs text-zinc-400">
         {entry.chain}
       </span>
       <span
@@ -101,7 +101,7 @@ function Section({
       {entries.length === 0 ? (
         <p className="text-sm text-zinc-500">{empty}</p>
       ) : (
-        <div className="rounded-lg border border-zinc-800 divide-y divide-zinc-800 overflow-hidden">
+        <div className="card card-hover divide-y divide-white/[0.06] overflow-hidden">
           {entries.map((e, i) => (
             <TokenRow
               key={`${e.chain}:${e.address}:${e.scannedAt}:${i}`}

@@ -28,6 +28,13 @@ TELEGRAM_BOT_TOKEN as a secret); the watch-worker does the same when its
 cron actually runs. Alert dedupe: same chain+address+rule within 30 min
 is suppressed across both writers.
 
+Alert confirmation (2026-08-21, web monitor only): a breach must be seen
+on two consecutive checks before alerting — DexScreener pair-set variance
+once produced a false "LINK liquidity dropped 99%" critical alert from a
+single pass. While a breach is pending, the pre-breach baseline is kept.
+KNOWN DIVERGENCE: watch-worker still uses single-pass alerting; port the
+two-strike gate before ever relying on its cron.
+
 ### Shared KV schema
 
 - `watch:list` → `[{chain, address, symbol, name, addedAt, lastScore,

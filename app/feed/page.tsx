@@ -21,8 +21,12 @@ export default async function FeedPage() {
   return (
     <div className="space-y-10">
       <section className="space-y-3 pt-2">
-        <h1 className="text-2xl font-bold tracking-tight">
-          Wall of <span className="text-red-400">Shame</span>
+        <p className="eyebrow">
+          <span className="eyebrow-dot" />
+          Live scan feed — last 24 hours
+        </p>
+        <h1 className="font-display text-3xl sm:text-4xl font-bold tracking-tight">
+          Wall of <span className="text-danger">Shame</span>
         </h1>
         <p className="text-zinc-400 text-sm max-w-xl">
           What the radar is catching right now — tokens scanned on RugRadar
