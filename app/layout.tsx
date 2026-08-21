@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import Link from "next/link";
 import { Space_Grotesk, Inter } from "next/font/google";
 import PwaRegister from "@/components/PwaRegister";
+import InstallPrompt from "@/components/InstallPrompt";
 import "./globals.css";
 
 const spaceGrotesk = Space_Grotesk({
@@ -58,6 +59,7 @@ export default function RootLayout({
           <div className="bg-vignette" />
         </div>
         <PwaRegister />
+        <InstallPrompt />
         <header className="relative z-10 border-b border-white/5">
           {/* cyan gradient hairline under the header border */}
           <div
@@ -73,17 +75,13 @@ export default function RootLayout({
               <img src="/icon.svg" alt="" className="h-6 w-6" />
               Rug<span className="text-brand-gradient">Radar</span>
             </Link>
-            <div className="flex items-center gap-4">
-              <Link
-                href="/feed"
-                className="text-xs text-zinc-400 hover:text-brand-cyan transition-colors"
-              >
+            <div className="flex items-center gap-2.5">
+              <Link href="/feed" className="nav-pill nav-pill-feed">
+                <span className="live-dot" />
                 Live feed
               </Link>
-              <Link
-                href="/alerts"
-                className="text-xs text-zinc-400 hover:text-brand-cyan transition-colors"
-              >
+              <Link href="/alerts" className="nav-pill nav-pill-watch">
+                <span className="live-dot" />
                 Deathwatch
               </Link>
               <span className="hidden sm:inline-flex items-center gap-1.5 text-[11px] uppercase tracking-widest text-zinc-500">

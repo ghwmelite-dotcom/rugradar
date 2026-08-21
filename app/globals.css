@@ -240,3 +240,47 @@ body {
 .text-brand-gradient {
   @apply bg-gradient-to-r from-brand-cyan to-brand-green bg-clip-text text-transparent;
 }
+
+/* Nav pills — standout header links with glow affordances */
+.nav-pill {
+  @apply inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-wider transition-all;
+}
+
+.nav-pill-feed {
+  @apply border-cyan-400/25 bg-cyan-400/[0.07] text-cyan-300 hover:border-cyan-400/50 hover:bg-cyan-400/[0.12];
+  box-shadow: 0 0 14px rgb(0 229 255 / 0.10);
+}
+
+.nav-pill-feed:hover {
+  box-shadow: 0 0 20px rgb(0 229 255 / 0.25);
+}
+
+.nav-pill-feed .live-dot {
+  @apply bg-cyan-300;
+  box-shadow: 0 0 8px rgb(0 229 255 / 0.8);
+}
+
+.nav-pill-watch {
+  @apply border-red-400/25 bg-red-400/[0.07] text-red-300 hover:border-red-400/50 hover:bg-red-400/[0.12];
+  box-shadow: 0 0 14px rgb(255 92 92 / 0.10);
+}
+
+.nav-pill-watch:hover {
+  box-shadow: 0 0 20px rgb(255 92 92 / 0.28);
+}
+
+.nav-pill-watch .live-dot {
+  @apply bg-red-400;
+  box-shadow: 0 0 8px rgb(255 92 92 / 0.8);
+}
+
+@keyframes install-rise {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
