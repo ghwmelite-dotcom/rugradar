@@ -1,0 +1,5 @@
+# Copy this file to .dev.vars for local dev (`pnpm dev` picks it up via
+# OpenNext's wrangler emulation). .dev.vars is gitignored — never commit it.
+#
+# Production: pnpm wrangler secret put ADMIN_PASSWORD
+ADMIN_PASSWORD=changeme
