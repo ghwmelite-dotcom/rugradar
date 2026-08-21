@@ -25,4 +25,11 @@
       },
     },
   ],
+  // Custom domain off trademetricspro.com (zone must be active on this
+  // account; deploy auto-creates the DNS record).
+  "routes": [
+    { "pattern": "rugradar.trademetricspro.com", "custom_domain": true },
+  ],
+  // Keep the workers.dev subdomain alive alongside the custom domain.
+  "workers_dev": true,
 }

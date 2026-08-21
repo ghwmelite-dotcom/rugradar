@@ -5,7 +5,7 @@ import { ReportView } from "@/components/ReportView";
 
 export const dynamic = "force-dynamic";
 
-const SITE_URL = "https://rugradar.ghwmelite.workers.dev";
+const SITE_URL = "https://rugradar.trademetricspro.com";
 
 export async function generateMetadata({
   params,

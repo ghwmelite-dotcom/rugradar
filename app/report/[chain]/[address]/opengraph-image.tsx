@@ -13,7 +13,7 @@ export const alt = "RugRadar token risk report";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
-const SITE_HOST = "rugradar.ghwmelite.workers.dev";
+const SITE_HOST = "rugradar.trademetricspro.com";
 const BG = "#05080d";
 
 const BAND_COLORS: Record<Band, string> = {

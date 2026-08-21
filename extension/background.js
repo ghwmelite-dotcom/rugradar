@@ -8,7 +8,7 @@
 // even before that CORS header ships. The content script tries a direct
 // fetch first and only relays here when the direct call fails.
 
-const API_BASE = "https://rugradar.ghwmelite.workers.dev";
+const API_BASE = "https://rugradar.trademetricspro.com";
 
 // chrome.storage.session defaults to TRUSTED_CONTEXTS, which excludes content
 // scripts. The content script's scan cache needs access, so widen it. The

@@ -29,7 +29,7 @@ interface Env {
   SCANNER_BASE_URL?: string;
 }
 
-const DEFAULT_SCANNER_BASE = "https://rugradar.ghwmelite.workers.dev";
+const DEFAULT_SCANNER_BASE = "https://rugradar.trademetricspro.com";
 const MAX_SCANS_PER_MESSAGE = 3;
 const FETCH_TIMEOUT_MS = 15_000;
 

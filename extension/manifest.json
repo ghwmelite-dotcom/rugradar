@@ -21,7 +21,7 @@
     "https://*.pump.fun/*",
     "https://axiom.trade/*",
     "https://*.axiom.trade/*",
-    "https://rugradar.ghwmelite.workers.dev/*"
+    "https://rugradar.trademetricspro.com/*"
   ],
   "background": {
     "service_worker": "background.js"

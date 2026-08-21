@@ -2,7 +2,7 @@
 
 Goal: turn the scanner into a viral loop — scan → share warning → card
 spreads → new visitors → live feed keeps them → they scan their own bags.
-Brand: RugRadar. Live at https://rugradar.ghwmelite.workers.dev.
+Brand: RugRadar. Live at https://rugradar.trademetricspro.com.
 
 ## F1 — Dynamic OG score cards
 
@@ -13,7 +13,7 @@ Every report URL shared to X/Telegram/Discord unfurls a branded card.
   back to a static card if the edge renderer fails).
 - Card content (1200×630): RugRadar logo, token icon+name+symbol+chain,
   score dial number, band badge (AVOID red / CAUTION amber / LOWER RISK
-  green), top 3 red flags as plain text, "rugradar.ghwmelite.workers.dev"
+  green), top 3 red flags as plain text, "rugradar.trademetricspro.com"
   footer, "Not financial advice".
 - Data: call `scanToken()` from `lib/scan.ts` directly (cached, so cheap).
   On scan failure render a generic branded card — never error the OG route.
@@ -93,7 +93,7 @@ Manifest V3, framework-free vanilla TS/JS.
 
 - Content scripts for `dexscreener.com`, `pump.fun`, `axiom.trade`:
   extract chain+address from the page URL/DOM, fetch
-  `https://rugradar.ghwmelite.workers.dev/api/scan`, inject a compact score
+  `https://rugradar.trademetricspro.com/api/scan`, inject a compact score
   badge (color-coded pill: score + band) near the token name; click → full
   report in a new tab.
 - Cache results in `chrome.storage.session` for 5min to respect rate limits.

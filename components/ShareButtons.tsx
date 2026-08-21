@@ -8,7 +8,7 @@ import { useState } from "react";
 import type { ScanResult } from "@/lib/scan";
 import type { Band } from "@/lib/scoring";
 
-const SITE_URL = "https://rugradar.ghwmelite.workers.dev";
+const SITE_URL = "https://rugradar.trademetricspro.com";
 
 export function canonicalReportUrl(chain: string, address: string): string {
   return `${SITE_URL}/report/${chain}/${address}`;

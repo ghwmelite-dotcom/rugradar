@@ -8,7 +8,7 @@
 (function () {
   "use strict";
 
-  const API_BASE = "https://rugradar.ghwmelite.workers.dev";
+  const API_BASE = "https://rugradar.trademetricspro.com";
   const CACHE_TTL_MS = 5 * 60 * 1000; // 5 min — respects the 30 scans/min site rate limit
   const FETCH_TIMEOUT_MS = 10000;
   const HOST_ID = "rugradar-badge-host";

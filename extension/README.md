@@ -40,7 +40,7 @@ After editing any file here, hit the reload button on the extension card in
   back to a `CA: <mint>`-style label in visible text.
 
 Once detected, it calls
-`GET https://rugradar.ghwmelite.workers.dev/api/scan?chain=…&address=…` and
+`GET https://rugradar.trademetricspro.com/api/scan?chain=…&address=…` and
 renders a color-coded pill: red AVOID (🚨 prefix on honeypot override), amber
 CAUTION, green LOWER RISK, gray UNSCORED, gray "scan unavailable" on API
 error/rate-limit. Clicking opens the full report at
@@ -55,7 +55,7 @@ it) and survives SPA navigation via URL polling plus a debounced
 ## Privacy
 
 The extension has host permissions only for the three DEX sites and
-`rugradar.ghwmelite.workers.dev`. It contacts the RugRadar API **only** when you
+`rugradar.trademetricspro.com`. It contacts the RugRadar API **only** when you
 are viewing a detected token page on a supported site, and sends only the
 chain + token address (the same public data anyone can paste into the web
 scanner). No analytics, no tracking, no other network calls.

@@ -3,7 +3,7 @@
 `rugradar-bot` is a standalone Cloudflare Worker, fully independent of the
 Next.js web app (`rugradar`). The two workers only talk over the public
 HTTP API: the bot receives Telegram webhooks, calls
-`GET https://rugradar.ghwmelite.workers.dev/api/resolve` and `/api/scan`,
+`GET https://rugradar.trademetricspro.com/api/resolve` and `/api/scan`,
 and replies with a formatted risk card linking to the full report page.
 Deploying or breaking one worker never affects the other.
 
