@@ -1,4 +1,4 @@
-# MemeScanner (meme-ca-scanner)
+# RugRadar (formerly MemeScanner)
 
 Paste a token contract address — or just a coin name — and get an instant,
 plain-language risk report before you buy. Built for meme-coin due diligence

@@ -284,7 +284,7 @@ function Report({ data }: { data: ScanResult }) {
       </div>
 
       <p className="text-xs text-zinc-600">
-        Not financial advice. MemeScanner flags red flags from public on-chain
+        Not financial advice. RugRadar flags red flags from public on-chain
         data — it cannot predict price.
       </p>
     </div>
