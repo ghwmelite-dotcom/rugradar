@@ -26,11 +26,14 @@ import {
 import type { Result } from "./providers/fetch";
 import { providerAvailable, recordProviderCall } from "./quota";
 import { scoreToken, type ScoreResult } from "./scoring";
+import { getDeployerProfile, type DeployerProfile } from "./deployer";
 import type { ProviderStatus, TokenReport } from "./types";
 
 export interface ScanResult {
   report: TokenReport;
   score: ScoreResult;
+  // F5: deployer rap sheet; null when no provider exposed a creator address.
+  deployer: DeployerProfile | null;
 }
 
 // ---------- market data (DexScreener, 60s TTL) ----------
@@ -134,6 +137,7 @@ function mergeEvmGoplus(sec: GoplusEvmSecurity): Partial<TokenReport> {
     top10HolderPct: sumTop10Pct(sec.holders),
     devWalletPct: asTaxPct(sec.creator_percent),
     holderCount: sec.holder_count ? parseInt(sec.holder_count, 10) : null,
+    deployerAddress: sec.creator_address || null,
   };
 }
 
@@ -191,6 +195,7 @@ function mergeRugcheck(rep: RugcheckReport): Partial<TokenReport> {
     devWalletPct,
     lpLockedOrBurned: hasLpInfo ? lockedPct >= 50 : null,
     lpLockDays,
+    deployerAddress: rep.creator || null,
   };
 }
 
@@ -340,6 +345,7 @@ export async function scanToken(
     top10HolderPct: f.top10HolderPct ?? null,
     devWalletPct: f.devWalletPct ?? null,
     holderCount: f.holderCount ?? null,
+    deployerAddress: f.deployerAddress ?? null,
 
     // Data-completeness rule: a category has data only if its critical
     // check is present.
@@ -353,5 +359,17 @@ export async function scanToken(
     scannedAt: new Date().toISOString(),
   };
 
-  return { report, score: scoreToken(report) };
+  // F5: deployer rap sheet. Reads the scan log as it was BEFORE this scan is
+  // recorded (the route records after scanToken returns), so the current
+  // token only appears on repeat scans — getDeployerProfile excludes it.
+  const deployer = report.deployerAddress
+    ? await getDeployerProfile(
+        report.deployerAddress,
+        chain,
+        address,
+        report.devWalletPct,
+      )
+    : null;
+
+  return { report, score: scoreToken(report), deployer };
 }

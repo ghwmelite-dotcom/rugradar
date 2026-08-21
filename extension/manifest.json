@@ -1,0 +1,43 @@
+{
+  "manifest_version": 3,
+  "name": "RugRadar — scan before you ape",
+  "version": "0.1.0",
+  "description": "Overlays RugRadar memecoin risk scores on DexScreener, pump.fun and Axiom token pages. Click the badge for the full report.",
+  "icons": {
+    "32": "icons/icon-32.png",
+    "180": "icons/icon-180.png"
+  },
+  "action": {
+    "default_icon": {
+      "32": "icons/icon-32.png",
+      "180": "icons/icon-180.png"
+    }
+  },
+  "permissions": ["storage"],
+  "host_permissions": [
+    "https://dexscreener.com/*",
+    "https://*.dexscreener.com/*",
+    "https://pump.fun/*",
+    "https://*.pump.fun/*",
+    "https://axiom.trade/*",
+    "https://*.axiom.trade/*",
+    "https://rugradar.ghwmelite.workers.dev/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://dexscreener.com/*",
+        "https://*.dexscreener.com/*",
+        "https://pump.fun/*",
+        "https://*.pump.fun/*",
+        "https://axiom.trade/*",
+        "https://*.axiom.trade/*"
+      ],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}

@@ -19,9 +19,25 @@ across Solana and the major EVM chains.
   with no usable data is reported as unscored rather than guessed.
 - **Trending feed** — top boosted tokens from DexScreener, hydrated with
   price/liquidity/volume, refreshed every 5 minutes.
+- **Shareable verdict cards** — every report URL unfurls a dynamic OG score
+  card on X/Telegram/Discord, with one-tap X/Telegram share buttons and
+  precomposed warning text on the report page.
+- **Wall of Shame** (`/feed`) — live public feed: honeypots caught, most
+  scanned tokens (last 24h), latest scans.
+- **Deployer rap sheet** — report pages show the deployer wallet, dev
+  supply %, and prior tokens previously seen by RugRadar with their
+  scores; serial deployers (≥2 prior AVOIDs) get a red warning.
 - **Graceful degradation** — if a data provider fails or hits quota, the
   affected categories are marked unavailable and excluded from the score;
   the rest of the report still renders.
+
+## Companions
+
+- **Telegram bot** (`telegram-bot/`) — separate `rugradar-bot` Worker; paste
+  a CA in any chat and get the score card inline. Setup: `telegram-bot/setup.md`.
+- **Browser extension** (`extension/`) — Manifest V3 overlay that injects the
+  score badge directly into DexScreener, pump.fun, and Axiom pages.
+  Load-unpacked instructions: `extension/README.md`.
 
 ## Supported chains (v1)
 
@@ -60,6 +76,8 @@ Every deduction emits a human-readable flag shown in the UI.
 | `GET /api/resolve?q=…`             | Classify input → chain+address or a picker         |
 | `GET /api/scan?chain=…&address=…`  | Full scan: providers → normalize → score (rate-limited) |
 | `GET /api/trending`                | Cached trending feed (5 min TTL)                   |
+| `GET /api/feed`                    | Wall of Shame: honeypots, most scanned, latest     |
+| `GET /api/image?u=…`               | Same-origin token-image proxy (allowlisted hosts)  |
 | `/report/[chain]/[address]`        | Rendered risk-report page                          |
 
 ## Development

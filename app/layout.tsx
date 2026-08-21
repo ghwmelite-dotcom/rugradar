@@ -28,9 +28,17 @@ export default function RootLayout({
               <img src="/icon.svg" alt="" className="h-6 w-6" />
               Rug<span className="text-emerald-400">Radar</span>
             </Link>
-            <span className="text-xs text-zinc-500">
-              solana · ethereum · bsc · base · arbitrum · polygon
-            </span>
+            <div className="flex items-center gap-4">
+              <Link
+                href="/feed"
+                className="text-xs text-zinc-400 hover:text-emerald-400 transition-colors"
+              >
+                Live feed
+              </Link>
+              <span className="hidden sm:inline text-xs text-zinc-500">
+                solana · ethereum · bsc · base · arbitrum · polygon
+              </span>
+            </div>
           </div>
         </header>
         <main className="flex-1 mx-auto w-full max-w-3xl px-4 py-8">

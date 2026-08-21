@@ -10,6 +10,10 @@ export interface TokenReport {
   name: string | null;
   symbol: string | null;
   imageUrl: string | null;
+  // Deployer/creator address (roadmap F5): GoPlus creator_address on EVM,
+  // RugCheck creator on Solana. Optional+null so pre-F5 fixtures stay valid;
+  // consumers treat undefined as null. null when unknown — never guessed.
+  deployerAddress?: string | null;
 
   // market data (informational context only — never moves the score)
   priceUsd: number | null;

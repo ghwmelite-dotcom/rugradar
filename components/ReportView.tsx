@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ScoreDial } from "./ScoreDial";
 import { SearchBox } from "./SearchBox";
+import { ShareButtons, canonicalReportUrl } from "./ShareButtons";
+import { DeployerCard } from "./DeployerCard";
 import { proxiedImage } from "@/lib/imageProxy";
 import type { ScanResult } from "@/lib/scan";
 import type { CategoryKey } from "@/lib/scoring";
@@ -243,6 +245,11 @@ function Report({ data }: { data: ScanResult }) {
         )
       )}
 
+      {/* deployer rap sheet (F5) — only when a provider exposed the deployer */}
+      {data.deployer && (
+        <DeployerCard profile={data.deployer} chain={report.chain} />
+      )}
+
       {/* market context */}
       <section className="space-y-2">
         <h2 className="text-sm font-semibold uppercase tracking-wider text-zinc-400">
@@ -273,14 +280,20 @@ function Report({ data }: { data: ScanResult }) {
         </div>
       </section>
 
-      <div className="flex items-center justify-between text-xs text-zinc-500 border-t border-zinc-800 pt-4">
+      <div className="flex items-center justify-between gap-3 text-xs text-zinc-500 border-t border-zinc-800 pt-4">
         <span>
           Scanned at {new Date(report.scannedAt).toLocaleString()} · share this
           URL to warn others
         </span>
-        <Link href="/" className="text-emerald-400 hover:underline">
-          Scan another
-        </Link>
+        <div className="flex shrink-0 items-center gap-3">
+          <ShareButtons
+            url={canonicalReportUrl(report.chain, report.address)}
+            data={data}
+          />
+          <Link href="/" className="text-emerald-400 hover:underline">
+            Scan another
+          </Link>
+        </div>
       </div>
 
       <p className="text-xs text-zinc-600">
