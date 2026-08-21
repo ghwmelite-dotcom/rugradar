@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ScoreDial } from "./ScoreDial";
 import { SearchBox } from "./SearchBox";
+import { proxiedImage } from "@/lib/imageProxy";
 import type { ScanResult } from "@/lib/scan";
 import type { CategoryKey } from "@/lib/scoring";
 import { CATEGORY_LABELS } from "@/lib/scoring";
@@ -147,9 +148,9 @@ function Report({ data }: { data: ScanResult }) {
 
       {/* header */}
       <div className="flex items-center gap-3">
-        {report.imageUrl ? (
+        {proxiedImage(report.imageUrl) ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={report.imageUrl} alt="" className="h-12 w-12 rounded-full" />
+          <img src={proxiedImage(report.imageUrl)!} alt="" className="h-12 w-12 rounded-full" />
         ) : (
           <div className="h-12 w-12 rounded-full bg-zinc-800" />
         )}

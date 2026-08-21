@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { proxiedImage } from "@/lib/imageProxy";
 import type { TrendingItem } from "@/lib/trending";
 
 function fmtUsd(n: number | null): string {
@@ -34,9 +35,9 @@ export function TrendingFeed({
           className="flex items-center gap-3 px-4 py-2.5 hover:bg-zinc-900 transition-colors"
         >
           <span className="w-6 text-xs text-zinc-600 text-right">{i + 1}</span>
-          {t.imageUrl ? (
+          {proxiedImage(t.imageUrl) ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={t.imageUrl} alt="" className="h-7 w-7 rounded-full" />
+            <img src={proxiedImage(t.imageUrl)!} alt="" className="h-7 w-7 rounded-full" />
           ) : (
             <div className="h-7 w-7 rounded-full bg-zinc-800" />
           )}
