@@ -60,8 +60,12 @@ function isYoung(pairAgeHours: number | null): boolean {
 }
 
 function fmtAgeHours(hours: number): string {
-  if (hours < 48) return `${Math.round(hours)} hours`;
-  return `${Math.round(hours / 24)} days`;
+  if (hours < 48) {
+    const h = Math.round(hours);
+    return `${h} hour${h === 1 ? "" : "s"}`;
+  }
+  const d = Math.round(hours / 24);
+  return `${d} day${d === 1 ? "" : "s"}`;
 }
 
 export interface Flag {

@@ -55,6 +55,7 @@ function makeScore(overrides: Partial<ScoreResult> = {}): ScoreResult {
     band: "CAUTION",
     coverage: 3,
     cap: 100,
+    ageCap: null,
     honeypotOverride: false,
     categories: {} as ScoreResult["categories"],
     flags: [],
