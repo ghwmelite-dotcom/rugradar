@@ -64,6 +64,7 @@ into a `TokenReport`, get cached, then scored.
 - Market data: 60s
 - Security data: 15min
 - Trending: 5min
+- Viral Radar payload: 15min (`viral:current`, admin-only)
 
 KV binding `MEMESCANNER_CACHE` in production, in-memory Map in dev.
 

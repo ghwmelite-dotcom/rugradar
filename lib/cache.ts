@@ -18,6 +18,7 @@ export const TTL = {
   SECURITY: 15 * 60, // GoPlus / RugCheck — 15 min
   MARKET: 60, // DexScreener — 60 s
   TRENDING: 5 * 60, // trending feed — 5 min, single global entry
+  VIRAL: 15 * 60, // Viral Radar payload — 15 min, single global entry
 } as const;
 
 interface Entry {

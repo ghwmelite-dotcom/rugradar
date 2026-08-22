@@ -103,6 +103,30 @@ Manifest V3, framework-free vanilla TS/JS.
   extension (add `Access-Control-Allow-Origin: *` header to `/api/scan`
   responses — public read-only data, acceptable).
 
+## F7 — Viral Radar (admin vault)
+
+Detect tokens going viral right now and turn the trend into ready-to-post
+X content. `/admin` section + `GET /api/admin/viral` + `lib/viral.ts`.
+
+- Signal: DexScreener `/token-boosts/top` (most promoted) union
+  `/token-boosts/latest` (just ignited), hydrated per chain via batched
+  `tokens/v1` lookups, pairs merged per token (liq/vol summed, momentum
+  from the deepest pair).
+- Heat score 0–100 (`heatScore`, pure): boosts 30 (log10, 1000 saturates),
+  volume 25 (log10, $10M saturates), momentum 20 (+500% 24h / +30% 1h),
+  buy pressure 15 (70% buys saturates), freshness 10 (<6h old).
+  Dust filter: liquidity >= $5k, name or symbol required.
+- Top 5 by heat are scanned via `scanToken` (provider caches apply) and
+  each gets a generated post: 🚨 alert template for flagged/unscored
+  (honeypots called out explicitly), ✅ contrarian template for the rare
+  clean trender, plus a combined daily heat-check digest. Posts follow
+  vault rules: no link in the main post, <= 240 chars, link in the reply.
+- Each pick's image is its existing OG score card
+  (`/report/[chain]/[address]/opengraph-image`) — download → attach → post.
+- Whole payload KV-cached as `viral:current` for 15 min (`TTL.VIRAL`);
+  failures cached too so a DexScreener outage can't turn admin reloads
+  into provider hammering.
+
 ## Cross-cutting
 
 - All features must keep `pnpm test` and `pnpm build` green.

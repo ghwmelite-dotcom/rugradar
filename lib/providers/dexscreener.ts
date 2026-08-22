@@ -15,7 +15,8 @@ export interface DexPair {
   baseToken: { address: string; name: string; symbol: string };
   quoteToken: { address: string; name: string; symbol: string };
   priceUsd?: string;
-  txns?: { h24?: { buys: number; sells: number } };
+  priceChange?: { h24?: number; h6?: number; h1?: number };
+  txns?: { h24?: { buys: number; sells: number }; h1?: { buys: number; sells: number } };
   volume?: { h24?: number };
   liquidity?: { usd?: number };
   pairCreatedAt?: number; // ms epoch
@@ -57,6 +58,14 @@ export interface DexBoost {
 // GET /token-boosts/top/v1 -> DexBoost[] (most-boosted tokens, ~30 items)
 export async function getTopBoosts(): Promise<Result<DexBoost[]>> {
   const res = await fetchJson<DexBoost[]>(`${BASE}/token-boosts/top/v1`);
+  if (!res.ok) return res;
+  return { ok: true, data: Array.isArray(res.data) ? res.data : [] };
+}
+
+// GET /token-boosts/latest/v1 -> DexBoost[] (most recently boosted — tokens
+// at ignition, before they hit the top list). Same shape as /top.
+export async function getLatestBoosts(): Promise<Result<DexBoost[]>> {
+  const res = await fetchJson<DexBoost[]>(`${BASE}/token-boosts/latest/v1`);
   if (!res.ok) return res;
   return { ok: true, data: Array.isArray(res.data) ? res.data : [] };
 }
