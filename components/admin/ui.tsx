@@ -67,7 +67,7 @@ export function PostToXButton({ text }: { text: string }) {
 export function PostBlock({ post }: { post: Post }) {
   return (
     <div className="space-y-2 rounded-lg border border-zinc-800 bg-zinc-900 p-3">
-      <pre className="whitespace-pre-wrap font-sans text-sm text-zinc-200">
+      <pre className="whitespace-pre-wrap break-words font-sans text-sm text-zinc-200">
         {post.text}
       </pre>
       <div className="flex flex-wrap items-center gap-2">
@@ -79,7 +79,7 @@ export function PostBlock({ post }: { post: Post }) {
       </div>
       {post.reply && (
         <div className="space-y-2 border-t border-zinc-800 pt-2">
-          <pre className="whitespace-pre-wrap font-sans text-xs text-zinc-400">
+          <pre className="whitespace-pre-wrap break-all font-sans text-xs text-zinc-400">
             {post.reply}
           </pre>
           <CopyButton text={post.reply} label="Copy link reply" />

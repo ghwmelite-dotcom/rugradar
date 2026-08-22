@@ -328,7 +328,7 @@ export function AdminDashboard() {
                   key={i}
                   className="space-y-2 rounded-lg border border-zinc-800 bg-zinc-900 p-3"
                 >
-                  <pre className="whitespace-pre-wrap font-sans text-sm text-zinc-200">
+                  <pre className="whitespace-pre-wrap break-words font-sans text-sm text-zinc-200">
                     {p}
                   </pre>
                   <div className="flex items-center gap-2">
@@ -340,7 +340,7 @@ export function AdminDashboard() {
                 </div>
               ))}
               <div className="space-y-2 rounded-lg border border-zinc-800 bg-zinc-900 p-3">
-                <pre className="whitespace-pre-wrap font-sans text-xs text-zinc-400">
+                <pre className="whitespace-pre-wrap break-all font-sans text-xs text-zinc-400">
                   {thread.linkReply}
                 </pre>
                 <CopyButton text={thread.linkReply} label="Copy link reply" />
@@ -392,7 +392,7 @@ export function AdminDashboard() {
         {caError && <p className="text-xs text-red-400">{caError}</p>}
         {verdict && (
           <div className="space-y-2 rounded-lg border border-zinc-800 bg-zinc-900 p-3">
-            <pre className="whitespace-pre-wrap font-sans text-sm text-zinc-200">
+            <pre className="whitespace-pre-wrap break-all font-sans text-sm text-zinc-200">
               {verdict}
             </pre>
             <div className="flex items-center gap-2">

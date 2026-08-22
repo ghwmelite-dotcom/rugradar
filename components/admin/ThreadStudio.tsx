@@ -137,7 +137,7 @@ export function ThreadStudio({
                 key={i}
                 className="rounded-xl border border-zinc-800 bg-zinc-950 p-3"
               >
-                <pre className="whitespace-pre-wrap font-sans text-sm text-zinc-200">
+                <pre className="whitespace-pre-wrap break-words font-sans text-sm text-zinc-200">
                   {post}
                 </pre>
                 <div className="mt-2 flex items-center gap-2">
@@ -152,7 +152,7 @@ export function ThreadStudio({
             ))}
 
             <div className="rounded-xl border border-dashed border-zinc-700 bg-zinc-950 p-3">
-              <pre className="whitespace-pre-wrap font-sans text-xs text-zinc-400">
+              <pre className="whitespace-pre-wrap break-all font-sans text-xs text-zinc-400">
                 {thread.linkReply}
               </pre>
               <div className="mt-2">
