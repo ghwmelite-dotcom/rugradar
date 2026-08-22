@@ -80,6 +80,10 @@ export default function RootLayout({
                 <span className="live-dot" />
                 Live feed
               </Link>
+              <Link href="/viral" className="nav-pill nav-pill-viral">
+                <span className="live-dot" />
+                Viral
+              </Link>
               <Link href="/alerts" className="nav-pill nav-pill-watch">
                 <span className="live-dot" />
                 Deathwatch

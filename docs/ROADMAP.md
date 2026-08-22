@@ -149,6 +149,15 @@ Two halves of the distribution play:
   the real verdict — flagged champion = honest watch mode, contrast post
   suppressed.
 
+## F9 — Public Viral Radar board (2026-08-22)
+
+`/viral` opens the admin vault's detection engine to the public: the same
+`getViralPicks()` payload (KV-cached 15min), server-rendered, minus the
+copy tooling. Cards show token icon, heat meter + drivers, verdict badge
+and top flag, and link to the full report (so every share unfurls the OG
+score card). Header nav gains an amber "Viral" pill between Live feed and
+Deathwatch. This is the shareable destination every X post points at.
+
 ## Cross-cutting
 
 - All features must keep `pnpm test` and `pnpm build` green.
