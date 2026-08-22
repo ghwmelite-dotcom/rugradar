@@ -144,7 +144,13 @@ function FooterRow() {
   );
 }
 
-function ScoreCard({ data }: { data: ScanResult }) {
+function ScoreCard({
+  data,
+  tokenImage,
+}: {
+  data: ScanResult;
+  tokenImage: string | null;
+}) {
   const { report, score } = data;
   const bandColor = score.band ? BAND_COLORS[score.band] : "#a1a1aa";
   const bandText = score.band ? BAND_TEXT[score.band] : "UNSCORED";
@@ -234,19 +240,33 @@ function ScoreCard({ data }: { data: ScanResult }) {
             minWidth: 0,
           }}
         >
-          <div
-            style={{
-              display: "flex",
-              fontSize: 88,
-              fontWeight: 800,
-              color: bandColor,
-              letterSpacing: -2,
-              lineHeight: 1,
-            }}
-          >
-            {report.symbol
-              ? truncate(`$${report.symbol}`, 14)
-              : truncate(report.name ?? "Unknown token", 16)}
+          <div style={{ display: "flex", alignItems: "center", gap: 24 }}>
+            {tokenImage ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={tokenImage}
+                width={104}
+                height={104}
+                style={{
+                  borderRadius: 9999,
+                  border: `3px solid ${bandColor}`,
+                }}
+              />
+            ) : null}
+            <div
+              style={{
+                display: "flex",
+                fontSize: 88,
+                fontWeight: 800,
+                color: bandColor,
+                letterSpacing: -2,
+                lineHeight: 1,
+              }}
+            >
+              {report.symbol
+                ? truncate(`$${report.symbol}`, 14)
+                : truncate(report.name ?? "Unknown token", 16)}
+            </div>
           </div>
           {report.symbol && report.name ? (
             <div
@@ -387,9 +407,30 @@ export default async function Image({
     }
   }
 
+  // Token artwork: the site shows token icons everywhere, so the card must
+  // carry the same identity. Fetched with a tight timeout and embedded as a
+  // data URI — any failure just renders the card without the logo.
+  let tokenImage: string | null = null;
+  if (data?.report.imageUrl) {
+    try {
+      const res = await fetch(data.report.imageUrl, {
+        signal: AbortSignal.timeout(5_000),
+      });
+      if (res.ok) {
+        const type = res.headers.get("content-type") ?? "image/png";
+        const buf = Buffer.from(await res.arrayBuffer());
+        if (buf.length <= 400_000) {
+          tokenImage = `data:${type};base64,${buf.toString("base64")}`;
+        }
+      }
+    } catch {
+      tokenImage = null;
+    }
+  }
+
   try {
     return new ImageResponse(
-      data ? <ScoreCard data={data} /> : <FallbackCard />,
+      data ? <ScoreCard data={data} tokenImage={tokenImage} /> : <FallbackCard />,
       { ...size },
     );
   } catch {
