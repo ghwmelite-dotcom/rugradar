@@ -1,4 +1,4 @@
-// Pure scoring engine — implements the v0 rubric from the design doc EXACTLY.
+// Pure scoring engine — implements the v1 rubric (docs/SCORING-V1.md).
 //
 //   Composite = weighted average over categories that HAVE DATA:
 //     Contract Safety 40%, Liquidity 35%, Holders 25%
@@ -11,6 +11,17 @@
 //   0/3 coverage -> unscored (no numeric score, never lands in a band).
 //   Bands: 0-39 AVOID, 40-69 CAUTION, 70-100 LOWER RISK (never "safe"/"buy").
 //   Every deduction emits a plain-language flag for the UI.
+//
+//   v1 (fresh-launch credibility fix):
+//   - Age gate (composite cap): <24h old -> cap 69; 24h-7d -> cap 84.
+//     No token under 24h has earned "LOWER RISK". Combines with coverage
+//     caps by taking the min.
+//   - Liquidity-depth deductions double when the pair is < 7 days old
+//     (<$10k: -60, <$50k: -30) — a $2k pool on a 2h-old token is an exit
+//     trap, not just "thin".
+//   - Top-10 >50% concentration costs -45 (from -30) when < 7 days old —
+//     fresh concentration has had no time to distribute organically.
+//   - Age never guessed: pairAgeHours null -> no gate, no scaling.
 
 import type { TokenReport } from "../types";
 
@@ -32,6 +43,27 @@ const WEIGHTS: Record<CategoryKey, number> = {
 
 const COVERAGE_CAPS: Record<number, number> = { 3: 100, 2: 75, 1: 50 };
 
+const HOURS_DAY = 24;
+const HOURS_WEEK = 24 * 7;
+
+// v1 age gate: composite caps by pair age. null age -> no cap (never guess).
+function ageCapFor(pairAgeHours: number | null): number | null {
+  if (pairAgeHours === null) return null;
+  if (pairAgeHours < HOURS_DAY) return 69; // CAUTION ceiling
+  if (pairAgeHours < HOURS_WEEK) return 84;
+  return null;
+}
+
+// v1 age scaling applies under 7 days.
+function isYoung(pairAgeHours: number | null): boolean {
+  return pairAgeHours !== null && pairAgeHours < HOURS_WEEK;
+}
+
+function fmtAgeHours(hours: number): string {
+  if (hours < 48) return `${Math.round(hours)} hours`;
+  return `${Math.round(hours / 24)} days`;
+}
+
 export interface Flag {
   category: CategoryKey | null; // null = composite-level (honeypot override)
   text: string;
@@ -49,7 +81,8 @@ export interface ScoreResult {
   score: number | null; // 0-100 integer, null when unscored
   band: Band | null;
   coverage: number; // 0-3 categories with data
-  cap: number | null;
+  cap: number | null; // effective cap (min of coverage cap and age cap)
+  ageCap: number | null; // v1 age gate cap, null when mature/unknown age
   honeypotOverride: boolean;
   categories: Record<CategoryKey, CategoryResult>;
   flags: Flag[]; // all flags, composite-level first
@@ -135,13 +168,28 @@ function scoreLiquidity(r: TokenReport): CategoryResult {
   // locked >= 30d or burned -> -0, no flag.
 
   // Liquidity-depth tiers — mutually exclusive, highest matching only.
+  // v1: deductions double when the pair is < 7 days old — a tiny pool on a
+  // fresh token is an exit trap, not merely "thin".
   if (r.liquidityUsd !== null) {
+    const young = isYoung(r.pairAgeHours);
     if (r.liquidityUsd < 10_000) {
-      score -= 30;
-      add(30, `Very low liquidity (${fmtUsd(r.liquidityUsd)} — under $10k) — hard to exit without moving the price.`);
+      const d = young ? 60 : 30;
+      score -= d;
+      add(
+        d,
+        young
+          ? `Very low liquidity (${fmtUsd(r.liquidityUsd)} — under $10k) on a pair less than 7 days old — an exit trap: no way out without moving the price.`
+          : `Very low liquidity (${fmtUsd(r.liquidityUsd)} — under $10k) — hard to exit without moving the price.`,
+      );
     } else if (r.liquidityUsd < 50_000) {
-      score -= 15;
-      add(15, `Low liquidity (${fmtUsd(r.liquidityUsd)} — under $50k).`);
+      const d = young ? 30 : 15;
+      score -= d;
+      add(
+        d,
+        young
+          ? `Low liquidity (${fmtUsd(r.liquidityUsd)} — under $50k) on a pair less than 7 days old.`
+          : `Low liquidity (${fmtUsd(r.liquidityUsd)} — under $50k).`,
+      );
     }
   }
   if (r.dexCount === 1) {
@@ -167,10 +215,18 @@ function scoreHolders(r: TokenReport): CategoryResult {
   let score = 100;
 
   // Top-10 concentration tiers — mutually exclusive.
+  // v1: the >50% tier scales to -45 when the pair is < 7 days old — fresh
+  // concentration has had no time for organic distribution.
   if (r.top10HolderPct !== null) {
     if (r.top10HolderPct > 50) {
-      score -= 30;
-      add(30, `Top 10 holders own ${r.top10HolderPct.toFixed(1)}% of supply — extreme concentration, dump risk.`);
+      const d = isYoung(r.pairAgeHours) ? 45 : 30;
+      score -= d;
+      add(
+        d,
+        isYoung(r.pairAgeHours)
+          ? `Top 10 holders own ${r.top10HolderPct.toFixed(1)}% of supply on a pair less than 7 days old — extreme fresh concentration, classic dump setup.`
+          : `Top 10 holders own ${r.top10HolderPct.toFixed(1)}% of supply — extreme concentration, dump risk.`,
+      );
     } else if (r.top10HolderPct > 30) {
       score -= 15;
       add(15, `Top 10 holders own ${r.top10HolderPct.toFixed(1)}% of supply — high concentration.`);
@@ -227,6 +283,7 @@ export function scoreToken(report: TokenReport): ScoreResult {
       band: "AVOID",
       coverage,
       cap: COVERAGE_CAPS[coverage] ?? null,
+      ageCap: null,
       honeypotOverride: true,
       categories,
       flags: [flag, ...categoryFlags],
@@ -241,6 +298,7 @@ export function scoreToken(report: TokenReport): ScoreResult {
       band: null,
       coverage: 0,
       cap: null,
+      ageCap: null,
       honeypotOverride: false,
       categories,
       flags: [],
@@ -253,8 +311,21 @@ export function scoreToken(report: TokenReport): ScoreResult {
     0,
   );
   const composite = weighted / weightSum;
-  const cap = COVERAGE_CAPS[coverage];
-  const score = clamp(Math.round(Math.min(composite, cap)));
+  const coverageCap = COVERAGE_CAPS[coverage];
+  const ageCap = ageCapFor(report.pairAgeHours);
+  const cap = ageCap !== null ? Math.min(coverageCap, ageCap) : coverageCap;
+  const uncapped = clamp(Math.round(composite));
+  const score = Math.min(uncapped, cap);
+
+  // When the age gate binds, it explains itself as a composite-level flag.
+  const flags = [...categoryFlags];
+  if (ageCap !== null && ageCap <= coverageCap && uncapped > ageCap) {
+    flags.unshift({
+      category: null,
+      text: `Score capped at ${ageCap} — the pair is only ${fmtAgeHours(report.pairAgeHours!)} old. Brand-new pairs can't earn trust yet.`,
+      deduction: Math.max(1, uncapped - score),
+    });
+  }
 
   return {
     scored: true,
@@ -262,8 +333,9 @@ export function scoreToken(report: TokenReport): ScoreResult {
     band: bandForScore(score),
     coverage,
     cap,
+    ageCap,
     honeypotOverride: false,
     categories,
-    flags: categoryFlags,
+    flags,
   };
 }

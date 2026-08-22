@@ -188,7 +188,9 @@ function Report({ data }: { data: ScanResult }) {
               <p className="text-xs text-zinc-500">
                 Score based on {score.coverage} of 3 risk categories
                 {score.cap !== null && score.cap < 100
-                  ? ` (capped at ${score.cap} for partial coverage)`
+                  ? score.ageCap !== null && score.ageCap === score.cap
+                    ? ` (capped at ${score.cap} — pair too new for full trust)`
+                    : ` (capped at ${score.cap} for partial coverage)`
                   : ""}
                 . Never a recommendation to buy.
               </p>

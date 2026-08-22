@@ -1,8 +1,9 @@
-# Scoring v1 proposal — the "fresh launch" credibility fix
+# Scoring v1 — the "fresh launch" credibility fix
 
-> Status: PROPOSAL (2026-08-21). v0 rubric lives in `lib/scoring/index.ts`
-> and `docs/DESIGN.md`. This doc proposes v1; nothing here is implemented
-> until this note is removed.
+> Status: SHIPPED (2026-08-22). Implemented in `lib/scoring/index.ts`,
+> boundary-tested in `lib/scoring/scoring.test.ts`, rubric updated in
+> `docs/DESIGN.md`. The doc's BABYCATE example is a live test case
+> (75 LOWER_RISK under v0 → 61 CAUTION under v1).
 
 ## The problem
 

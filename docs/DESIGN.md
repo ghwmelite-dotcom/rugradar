@@ -68,7 +68,7 @@ into a `TokenReport`, get cached, then scored.
 
 KV binding `MEMESCANNER_CACHE` in production, in-memory Map in dev.
 
-## Scoring — v0 Rubric
+## Scoring — v1 Rubric
 
 Pure function (`lib/scoring/index.ts`). Composite = weighted average over
 categories **that have data**: Contract Safety 40%, Liquidity 35%, Holders
@@ -85,12 +85,14 @@ check are mutually exclusive (highest matching deduction only).
 ### Liquidity (35%)
 
 - LP not locked/burned −40 · locked <30 days −15 (mutually exclusive)
-- Liquidity <$10k −30 · <$50k −15 (mutually exclusive)
+- Liquidity <$10k −30 · <$50k −15 (mutually exclusive) — **doubled when the
+  pair is < 7 days old** (−60 / −30)
 - Single DEX pair −10 · pair <24h old −10
 
 ### Holders (25%)
 
-- Top-10 >50% −30 · >30% −15 (mutually exclusive)
+- Top-10 >50% −30 (**−45 when the pair is < 7 days old**) · >30% −15
+  (mutually exclusive)
 - Dev wallet >10% −25 · >5% −10 (mutually exclusive)
 - <100 holders −20
 
@@ -98,6 +100,10 @@ check are mutually exclusive (highest matching deduction only).
 
 - **Honeypot override**: score forced to 0 / AVOID, regardless of all else.
 - **Coverage caps**: 3/3 categories → cap 100, 2/3 → 75, 1/3 → 50.
+- **Age gate** (v1): pair <24h → cap 69 · 24h–7d → cap 84 · ≥7d → no cap.
+  Combines with coverage caps by taking the min; when the gate binds it
+  emits a self-explaining composite flag. Age never guessed (null → no
+  gate, no scaling).
 - **0/3 coverage** → unscored (no numeric score, never lands in a band).
 - **Bands**: 0–39 AVOID, 40–69 CAUTION, 70–100 LOWER RISK.
 - Every deduction emits a plain-language flag for the UI.
