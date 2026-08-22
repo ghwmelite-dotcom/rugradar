@@ -46,6 +46,8 @@ two-strike gate before ever relying on its cron.
 - `calledit:list` → permanent receipts `[{chain, address, symbol,
   flaggedBand, flaggedAt, ruggedAt, rule}]`, cap 500, no TTL.
 - `tg:subs` → `[chatId, ...]` Telegram subscriber list, no TTL.
+- `admin:community` → `{chain, address, label}` Community Beacon champion
+  token config ($CATE), no TTL (web app only — see ROADMAP F8).
 
 ## rugradar-watch worker (new dir `watch-worker/`)
 

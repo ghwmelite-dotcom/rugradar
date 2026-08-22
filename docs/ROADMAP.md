@@ -127,6 +127,28 @@ X content. `/admin` section + `GET /api/admin/viral` + `lib/viral.ts`.
   failures cached too so a DexScreener outage can't turn admin reloads
   into provider hammering.
 
+## F8 — Community Beacon + rich Telegram alerts (2026-08-22)
+
+Two halves of the distribution play:
+
+- **Rich Telegram alerts** — bot scan replies and Deathwatch broadcasts now
+  send the token's branded OG score card via `sendPhoto` with an HTML
+  caller-bot-style stat sheet (verdict headline, price/liq/vol/age/holder
+  stats, top 3 flags, tap-to-copy CA in `<code>`) plus Chart/Full-report
+  inline buttons. Fallback chain: photo+HTML → message+HTML → plain text.
+  Lives in `telegram-bot/src/index.ts` (`formatCard`, `sendScanCard`) and
+  `lib/monitor.ts` (`broadcast`).
+- **Sleeker OG card** — `opengraph-image.tsx` redesign: brand gradient bar,
+  radar rings, huge $TICKER in band color, score ring, market stat chips.
+- **Community Beacon** (`/admin`, lib/community.ts, `/api/admin/community`)
+  — champion-token content engine, configured once (chain + CA + label in
+  KV `admin:community`). Generates a daily radar-check post, a contrast
+  post vs the Viral Radar field, a rally post, and raid replies that carry
+  the report link by design (they're replies — every raid unfurls the
+  score card under someone else's post). CREDIBILITY RULE: copy follows
+  the real verdict — flagged champion = honest watch mode, contrast post
+  suppressed.
+
 ## Cross-cutting
 
 - All features must keep `pnpm test` and `pnpm build` green.

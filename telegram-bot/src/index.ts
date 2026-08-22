@@ -71,6 +71,13 @@ interface ScanResponse {
     address: string;
     name: string | null;
     symbol: string | null;
+    // Market context (informational; may be null when DexScreener is thin).
+    priceUsd?: number | null;
+    liquidityUsd?: number | null;
+    volume24h?: number | null;
+    pairAgeHours?: number | null;
+    top10HolderPct?: number | null;
+    holderCount?: number | null;
   };
   score?: {
     score: number | null;
@@ -125,10 +132,10 @@ function extractAddresses(text: string): Target[] {
   return out;
 }
 
-// --- Formatting (Telegram legacy Markdown) ---
+// --- Formatting (Telegram HTML — caller-bot style stat sheet) ---
 
-function escapeMd(text: string): string {
-  return text.replace(/([_*`[])/g, "\\$1");
+function escHtml(text: string): string {
+  return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
 const BAND_PRESENTATION: Record<string, { emoji: string; label: string }> = {
@@ -137,32 +144,113 @@ const BAND_PRESENTATION: Record<string, { emoji: string; label: string }> = {
   LOWER_RISK: { emoji: "✅", label: "LOWER RISK" },
 };
 
-function formatCard(scan: ScanResponse, base: string): string {
+function fmtUsd(n: number): string {
+  if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000) return `$${(n / 1_000).toFixed(1)}K`;
+  return `$${n.toFixed(0)}`;
+}
+
+// Prices need precision, not rounding — memecoins live at $0.0000x.
+function fmtPrice(n: number): string {
+  if (n >= 1) return `$${n.toFixed(2)}`;
+  if (n >= 0.0001) return `$${n.toFixed(6)}`;
+  return `$${n.toPrecision(3)}`;
+}
+
+function fmtAge(hours: number): string {
+  if (hours < 1) return `${Math.max(1, Math.round(hours * 60))}m`;
+  if (hours < 48) return `${Math.round(hours)}h`;
+  const days = hours / 24;
+  if (days >= 365) return `${(days / 365).toFixed(1)}y`;
+  return `${Math.round(days)}d`;
+}
+
+function reportLink(base: string, chain: string, address: string): string {
+  return `${base}/report/${encodeURIComponent(chain)}/${encodeURIComponent(address)}`;
+}
+
+function chartLink(chain: string, address: string): string {
+  return `https://dexscreener.com/${encodeURIComponent(chain)}/${encodeURIComponent(address)}`;
+}
+
+// The scan card. Two flavors of text come out of one builder:
+//   html  — rich stat sheet, used as the sendPhoto caption (<= 1024 chars)
+//   plain — fallback with no markup when Telegram rejects the HTML
+function formatCard(
+  scan: ScanResponse,
+  base: string,
+): { html: string; plain: string; photo: string; chain: string; address: string } {
   const report = scan.report!;
   const score = scan.score!;
   const name = report.name ?? "Unknown token";
-  const symbol = report.symbol ? ` ($${report.symbol})` : "";
+  const ticker = report.symbol ? `$${report.symbol}` : name;
   const band = score.band ? BAND_PRESENTATION[score.band] : null;
-  const emoji = band?.emoji ?? "❔";
+  const emoji = score.honeypotOverride ? "🍯" : (band?.emoji ?? "❔");
 
-  const lines: string[] = [];
-  lines.push(`${emoji} *${escapeMd(name)}${escapeMd(symbol)}* · ${escapeMd(report.chain)}`);
-  if (score.score == null || !band) {
-    lines.push(`Score: _unscored — not enough data to rate_`);
-  } else {
-    lines.push(`Score: *${score.score}/100* — ${band.emoji} ${band.label}`);
+  const headText = band
+    ? `${ticker} · ${score.score ?? "—"}/100 — ${band.label}`
+    : `${ticker} · unscored`;
+
+  // Stat lines — only stats we actually have, two per line.
+  const stats: string[] = [];
+  if (report.priceUsd != null) stats.push(`💵 ${fmtPrice(report.priceUsd)}`);
+  if (report.liquidityUsd != null) stats.push(`💧 Liq ${fmtUsd(report.liquidityUsd)}`);
+  if (report.volume24h != null) stats.push(`📊 Vol ${fmtUsd(report.volume24h)}/24h`);
+  if (report.pairAgeHours != null) stats.push(`🕐 Age ${fmtAge(report.pairAgeHours)}`);
+  if (report.top10HolderPct != null)
+    stats.push(`👥 Top 10: ${report.top10HolderPct.toFixed(1)}%`);
+  if (report.holderCount != null)
+    stats.push(`🏦 ${report.holderCount.toLocaleString()} holders`);
+  const statLines: string[] = [];
+  for (let i = 0; i < stats.length; i += 2) {
+    statLines.push(stats.slice(i, i + 2).join("   "));
   }
-  if (score.honeypotOverride) {
-    lines.push(`🍯 *HONEYPOT* — sell simulation failed. Do not buy.`);
-  }
+
   const flags = [...score.flags]
     .sort((a, b) => b.deduction - a.deduction)
     .slice(0, 3);
-  for (const f of flags) {
-    lines.push(`• ${escapeMd(f.text)} (−${f.deduction})`);
+
+  const htmlLines: string[] = [];
+  htmlLines.push(`${emoji} <b>${escHtml(headText)}</b>`);
+  htmlLines.push(
+    `${escHtml(name)} · ${escHtml(report.chain)} · <a href="${reportLink(base, report.chain, report.address)}">Full report</a>`,
+  );
+  if (score.honeypotOverride) {
+    htmlLines.push(`🍯 <b>HONEYPOT</b> — buys go in, sells don't come out. Do not touch.`);
   }
-  lines.push(`[Full report](${base}/report/${report.chain}/${encodeURIComponent(report.address)})`);
-  return lines.join("\n");
+  if (!band) {
+    htmlLines.push(`<i>Unscored — not enough data to rate. Treat unknowns as risk.</i>`);
+  }
+  if (statLines.length > 0) {
+    htmlLines.push("");
+    htmlLines.push(...statLines);
+  }
+  if (flags.length > 0) {
+    htmlLines.push("");
+    htmlLines.push(`<b>Red flags</b>`);
+    for (const f of flags) htmlLines.push(`• ${escHtml(f.text)} (−${f.deduction})`);
+  }
+  htmlLines.push("");
+  htmlLines.push(`<code>${escHtml(report.address)}</code>`);
+
+  // Plain-text fallback: same content, no markup, link spelled out.
+  const plainLines: string[] = [];
+  plainLines.push(`${emoji} ${headText}`);
+  plainLines.push(`${name} · ${report.chain}`);
+  if (score.honeypotOverride) plainLines.push(`HONEYPOT — sells blocked. Do not touch.`);
+  if (!band) plainLines.push(`Unscored — not enough data to rate.`);
+  if (statLines.length > 0) plainLines.push(...statLines);
+  for (const f of flags) plainLines.push(`- ${f.text} (-${f.deduction})`);
+  plainLines.push(report.address);
+  plainLines.push(reportLink(base, report.chain, report.address));
+
+  return {
+    html: htmlLines.join("\n"),
+    plain: plainLines.join("\n"),
+    photo: `${reportLink(base, report.chain, report.address)}/opengraph-image`,
+    chain: report.chain,
+    address: report.address,
+  };
 }
 
 // --- Scanner calls ---
@@ -214,9 +302,20 @@ async function resolveTarget(target: Target, base: string): Promise<Resolved> {
   };
 }
 
-async function buildReply(target: Target, base: string): Promise<string> {
+// Legacy Markdown escaping — still used by picker/error/watch messages.
+function escapeMd(text: string): string {
+  return text.replace(/([_*`[])/g, "\\$1");
+}
+
+// A scan reply is either plain text (errors, multi-chain picker) or a rich
+// card (photo + HTML caption + buttons, with plain fallback).
+type Reply =
+  | { kind: "text"; text: string }
+  | { kind: "card"; html: string; plain: string; photo: string; chain: string; address: string };
+
+async function buildReply(target: Target, base: string): Promise<Reply> {
   const resolved = await resolveTarget(target, base);
-  if (resolved.kind === "reply") return resolved.text;
+  if (resolved.kind === "reply") return { kind: "text", text: resolved.text };
   const { chain, address } = resolved;
 
   let scan: ScanResponse;
@@ -225,12 +324,18 @@ async function buildReply(target: Target, base: string): Promise<string> {
       `${base}/api/scan?chain=${encodeURIComponent(chain)}&address=${encodeURIComponent(address)}`,
     )) as ScanResponse;
   } catch (err) {
-    return `⚠️ Scan failed for \`${address}\`: ${escapeMd(err instanceof Error ? err.message : "unknown error")}`;
+    return {
+      kind: "text",
+      text: `⚠️ Scan failed for \`${address}\`: ${escapeMd(err instanceof Error ? err.message : "unknown error")}`,
+    };
   }
   if (!scan.report || !scan.score) {
-    return `⚠️ Scan failed for \`${address}\`: ${escapeMd(scan.error ?? "no data")}`;
+    return {
+      kind: "text",
+      text: `⚠️ Scan failed for \`${address}\`: ${escapeMd(scan.error ?? "no data")}`,
+    };
   }
-  return formatCard(scan, base);
+  return { kind: "card", ...formatCard(scan, base) };
 }
 
 // --- Telegram send ---
@@ -256,6 +361,62 @@ async function sendTelegram(env: Env, chatId: number, text: string): Promise<voi
   if (!retry.ok) {
     console.error("sendMessage failed", retry.status, await retry.text());
   }
+}
+
+// Scan card delivery: branded score-card image (sendPhoto) with the HTML
+// stat sheet as caption and Chart/Report buttons. Fallback chain:
+// photo+HTML -> message+HTML (with link preview) -> plain text. Telegram
+// photo captions cap at 1024 chars — the stat sheet is well under that.
+async function sendScanCard(
+  env: Env,
+  chatId: number,
+  card: { html: string; plain: string; photo: string; chain: string; address: string },
+  base: string,
+): Promise<void> {
+  const buttons = {
+    inline_keyboard: [
+      [
+        { text: "📊 Chart", url: chartLink(card.chain, card.address) },
+        { text: "🔍 Full report", url: reportLink(base, card.chain, card.address) },
+      ],
+    ],
+  };
+
+  const photo = await fetch(
+    `https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/sendPhoto`,
+    {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        chat_id: chatId,
+        photo: card.photo,
+        caption: card.html.slice(0, 1024),
+        parse_mode: "HTML",
+        reply_markup: buttons,
+      }),
+    },
+  );
+  if (photo.ok) return;
+  console.error("sendPhoto failed", photo.status, await photo.text());
+
+  const htmlMsg = await fetch(
+    `https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/sendMessage`,
+    {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        chat_id: chatId,
+        text: card.html,
+        parse_mode: "HTML",
+        reply_markup: buttons,
+        disable_web_page_preview: false,
+      }),
+    },
+  );
+  if (htmlMsg.ok) return;
+  console.error("sendMessage HTML failed", htmlMsg.status, await htmlMsg.text());
+
+  await sendTelegram(env, chatId, card.plain);
 }
 
 // --- Deathwatch: subscriber list (tg:subs) + commands ---
@@ -446,7 +607,11 @@ async function processUpdate(update: TelegramUpdate, env: Env): Promise<void> {
   for (const target of targets) {
     try {
       const reply = await buildReply(target, base);
-      await sendTelegram(env, msg.chat.id, reply);
+      if (reply.kind === "card") {
+        await sendScanCard(env, msg.chat.id, reply, base);
+      } else {
+        await sendTelegram(env, msg.chat.id, reply.text);
+      }
     } catch (err) {
       console.error("scan failed", target.address, err);
       await sendTelegram(

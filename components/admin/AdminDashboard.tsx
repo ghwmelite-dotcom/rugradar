@@ -9,6 +9,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import type { ScanResult } from "@/lib/scan";
 import { ThreadStudio } from "./ThreadStudio";
 import { ViralRadar } from "./ViralRadar";
+import { CommunityBeacon } from "./CommunityBeacon";
 import { CopyButton, PostBlock, Section } from "./ui";
 import {
   caReplyVerdict,
@@ -238,6 +239,9 @@ export function AdminDashboard() {
 
       {/* Viral Radar — trend-riding engine, the flagship */}
       <ViralRadar />
+
+      {/* Community Beacon — $CATE champion content */}
+      <CommunityBeacon />
 
       {/* A. Daily Rug Report */}
       <Section

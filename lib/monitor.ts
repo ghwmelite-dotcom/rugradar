@@ -132,7 +132,10 @@ function getTelegramToken(): string | undefined {
   return process.env.TELEGRAM_BOT_TOKEN || undefined;
 }
 
-// Send the alert card to every Telegram subscriber. Best-effort per chat:
+// Send the alert card to every Telegram subscriber. Caller-bot style:
+// branded OG score card as the photo, HTML caption (severity headline,
+// what happened, tap-to-copy CA), Chart/Report buttons. Fallback chain:
+// photo+HTML -> message+HTML -> plain text. Best-effort per chat:
 // allSettled + 10s abort timeouts; failures lose a message, never a kick.
 async function broadcast(kv: KVBindingLike, alert: AlertEntry): Promise<void> {
   const token = getTelegramToken();
@@ -140,25 +143,69 @@ async function broadcast(kv: KVBindingLike, alert: AlertEntry): Promise<void> {
   const subs = await kv.get(SUBS_KEY, "json");
   if (!Array.isArray(subs) || subs.length === 0) return;
 
+  const esc = (s: string) =>
+    s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
   const emoji =
     alert.severity === "rug" ? "💀" : alert.severity === "critical" ? "🚨" : "⚠️";
-  const text = [
-    `${emoji} ${alert.symbol ?? "Unknown token"} · ${alert.chain}`,
-    alert.text,
-    `${REPORT_BASE}/${alert.chain}/${alert.address}`,
+  const headline =
+    alert.severity === "rug"
+      ? "RUG PULL"
+      : alert.severity === "critical"
+        ? "CRITICAL DRAIN"
+        : "DRAIN WARNING";
+  const label = alert.symbol ? `$${alert.symbol}` : "Unknown token";
+  const reportUrl = `${REPORT_BASE}/${alert.chain}/${alert.address}`;
+  const photo = `${reportUrl}/opengraph-image`;
+  const chartUrl = `https://dexscreener.com/${encodeURIComponent(alert.chain)}/${encodeURIComponent(alert.address)}`;
+
+  const html = [
+    `${emoji} <b>${headline} — ${esc(label)}</b>`,
+    `${esc(alert.chain)} · ${esc(alert.text)}`,
+    "",
+    `<code>${esc(alert.address)}</code>`,
   ].join("\n");
+  const plain = [
+    `${emoji} ${headline} — ${label}`,
+    `${alert.chain} · ${alert.text}`,
+    alert.address,
+    reportUrl,
+  ].join("\n");
+  const buttons = {
+    inline_keyboard: [
+      [
+        { text: "📊 Chart", url: chartUrl },
+        { text: "🔍 Full report", url: reportUrl },
+      ],
+    ],
+  };
 
   await Promise.allSettled(
     subs.map(async (chatId) => {
       const ctrl = new AbortController();
       const timer = setTimeout(() => ctrl.abort(), 10_000);
-      try {
-        await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+      const post = (method: string, body: object) =>
+        fetch(`https://api.telegram.org/bot${token}/${method}`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ chat_id: chatId, text }),
+          body: JSON.stringify({ chat_id: chatId, ...body }),
           signal: ctrl.signal,
         });
+      try {
+        const photoRes = await post("sendPhoto", {
+          photo,
+          caption: html.slice(0, 1024),
+          parse_mode: "HTML",
+          reply_markup: buttons,
+        });
+        if (photoRes.ok) return;
+        const htmlRes = await post("sendMessage", {
+          text: html,
+          parse_mode: "HTML",
+          reply_markup: buttons,
+          disable_web_page_preview: false,
+        });
+        if (htmlRes.ok) return;
+        await post("sendMessage", { text: plain });
       } finally {
         clearTimeout(timer);
       }
